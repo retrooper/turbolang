@@ -27,9 +27,9 @@ void run() {
     turbolang::compilermanager::output_to_file = true;
     class turbolang::tokenizer tokenizer;
     std::vector<turbolang::token> tokens = tokenizer.tokenize(code);
-    /*for (const auto& t : tokens) {
+    for (const auto& t : tokens) {
         t.debug();
-    }*/
+    }
     class turbolang::parser parser;
     parser.parse(tokens);
     std::cout << "Parsing source code..." << std::endl;

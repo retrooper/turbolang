@@ -13,6 +13,7 @@ namespace turbolang {
         friend class printer;
         friend class sleeper;
         friend class exiter;
+        friend class parser;
     private:
         static llvm::LLVMContext llvmContext;
         static llvm::IRBuilder<> llvmIRBuilder;

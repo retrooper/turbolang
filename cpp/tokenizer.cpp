@@ -80,6 +80,7 @@ namespace turbolang {
                         endToken(&currentToken, &tokens);
                         currentToken.type = TOKEN_TYPE_OPERATOR;
                         currentToken.text.append(1, currChar);
+                        endToken(&currentToken, &tokens);//was not
                     } else {
                         currentToken.text.append(1, currChar);
                     }
