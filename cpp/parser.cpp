@@ -110,14 +110,30 @@ namespace turbolang {
         }
 
         std::vector<statement> statements;
-        std::optional<statement> statement = parseStatement();
-        if (statement.has_value()) {
-            statements.push_back(statement.value());
+        std::optional<token> tempToken = std::nullopt;
+        while (true){
+            tempToken = expect_token();
+            currentToken--;
+            if ((tempToken.has_value() && tempToken.value().type == TOKEN_TYPE_OPERATOR && tempToken.value().text == "}")
+            || !tempToken.has_value()) {
+                break;
+            }
+
+            try {
+                std::optional<statement> statement = parseStatement();
+                if (statement.has_value()) {
+                    statements.push_back(statement.value());
+                }
+            }
+            catch (std::exception& ex) {
+                ex.what();
+                break;
+            }
         }
 
-        /*if (!expect_token_type(TOKEN_TYPE_OPERATOR, "}").has_value()) {
+        if (!expect_token_type(TOKEN_TYPE_OPERATOR, "}").has_value()) {
             throw std::runtime_error("Unbalanced '}'. Line: " + std::to_string(currentToken->lineNumber));
-        }*/
+        }
         return statements;
     }
 
@@ -131,14 +147,17 @@ namespace turbolang {
             if (get_variable_type(typeToken.value().text).has_value()) {
                 //IT IS A VARIABLE DECLARATION
                 parseVariableDeclaration(statement, typeToken.value());
+                return statement;
             } else {
                 auto equalsOperator = expect_token_type(TOKEN_TYPE_OPERATOR, "=");
                 if (equalsOperator.has_value()) {
                     //IT IS A VARIABLE MODIFICATION. We pass in variable name
                     parseVariableModification(statement, typeToken);
+                    return statement;
                 } else {
                     //IT IS A FUNCTION CALL. We pass in the function name
                     parseFunctionCall(statement, typeToken);
+                    return statement;
                 }
             }
         }
@@ -162,11 +181,11 @@ namespace turbolang {
                                   << ", NAME: "
                                   << statement.name << ", VALUE: " << variableValue.value().text << std::endl;
                         llvm::Value* value = turbolang::compilermanager::llvmIRBuilder.getInt(llvm::APInt(32, std::stoi(variableValue.value().text)));
-                        llvm::IntegerType* type = turbolang::compilermanager::llvmIRBuilder.getInt32Ty();
-                        turbolang::compilermanager::llvmModule->getOrInsertGlobal(variableNameToken.value().text, type);
-                        llvm::GlobalVariable* globalVariable = turbolang::compilermanager::llvmModule->getGlobalVariable(variableNameToken.value().text);
-                        std::cout << globalVariable->getName().str() << std::endl;
-                        //TODO FINISH, global var created
+                       auto type = llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext);
+                       //TODO store locally
+                       if (!expect_token_type(TOKEN_TYPE_OPERATOR, ";").has_value()) {
+                           throw std::runtime_error("Expected a semicolon!");
+                       }
                     }
                 }
             }
@@ -181,7 +200,7 @@ namespace turbolang {
             statement.type = VARIABLE_MODIFICATION;
             //statement.vartype = ?
             statement.name = variableName.value().text;
-            std::cout << "MODIFIED VALUE: " << variableValue.value().text << std::endl;
+            std::cout << "MODIFIED VARIABLE NAME: " << statement.name << ", MODIFIED VALUE: " << variableValue.value().text << std::endl;
             if (!expect_token_type(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
             }
