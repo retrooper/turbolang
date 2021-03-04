@@ -5,6 +5,7 @@
 #include "utils/exiter.h"
 #include "data/functiondefinition.h"
 #include "data/parameterdefinition.h"
+#include "data/functioncallprocessor.h"
 #include "data/type.h"
 #include "data/statement.h"
 #include <vector>
@@ -12,15 +13,16 @@
 
 namespace turbolang {
     class parser {
+        friend class compilermanager;
     public:
-        parser() = default;
-
+        parser();
         void parse(std::vector<token> &tokens);
 
     private:
+
         std::vector<token>::iterator currentToken;
         std::vector<token>::iterator endToken;
-        std::map<std::string, functiondefinition> functions;
+        std::string currentFuncName;
         bool expect_function_definition();
         std::optional<std::vector<statement>> parse_function_body();
         std::optional<token> expect_token_type(const tokentype &type, const std::string &name);

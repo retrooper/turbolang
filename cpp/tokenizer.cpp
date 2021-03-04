@@ -153,7 +153,6 @@ namespace turbolang {
             std::cout << "IGNORING COMMENT " << token->text << std::endl;
         } else if (token->type != TOKEN_TYPE_WHITESPACE) {
             tokens->push_back(*token);
-
         } else if (token->type == TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL) {
             if (token->text == ".") {
                 token->type = TOKEN_TYPE_OPERATOR;
