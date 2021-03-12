@@ -2,13 +2,27 @@
 
 namespace turbolang {
 
-    void functioncallprocessor::process(const turbolang::functiondefinition &currentFunction,
+    llvm::Value* functioncallprocessor::external_func_process(turbolang::functiondefinition &targetFunction,
                                         std::vector<llvm::Value *> &arguments) {
-        //TODO get function call target name
+        llvm::Function* function = turbolang::compilermanager::llvmModule->getFunction(targetFunction.name);
+        auto* returnValue = turbolang::compilermanager::llvmIRBuilder.CreateCall(function, arguments);
+        llvm::outs() << "aye: " << *returnValue << "\n";
+
+        return returnValue;
     }
 
-    void printfcallprocessor::process(const turbolang::functiondefinition &currentFunction,
+    llvm::Value* functioncallprocessor::process(functiondefinition &currentFunction, std::vector<llvm::Value *> &arguments) {
+        return nullptr;
+    }
+
+    llvm::Value* printfcallprocessor::process(turbolang::functiondefinition &currentFunction,
                                       std::vector<llvm::Value *> &arguments) {
         turbolang::printer::printf(arguments);
+        return nullptr;
+    }
+
+    llvm::Value* exitcallprocessor::process(functiondefinition &currentFunction, std::vector<llvm::Value*>& arguments) {
+        turbolang::exiter::exit(arguments[0]);
+        return nullptr;
     }
 }

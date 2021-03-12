@@ -4,6 +4,7 @@ namespace turbolang {
 
     parser::parser() {
         turbolang::compilermanager::functionCallProcessorMap["printf"] = new turbolang::printfcallprocessor();
+        turbolang::compilermanager::functionCallProcessorMap["exit"] = new turbolang::exitcallprocessor();
     }
 
     void parser::parse(std::vector<token> &tokens) {
@@ -17,7 +18,6 @@ namespace turbolang {
                 std::cerr << "Unknown identifier " << currentToken->text << std::endl;
                 currentToken++;
             }
-            break; //was not
         }
     }
 
@@ -51,17 +51,68 @@ namespace turbolang {
         return returnToken;
     }
 
+    std::optional<variabletype> parser::expect_token_variable_type() {
+        std::optional<token> identifier = expect_token_type(TOKEN_TYPE_IDENTIFIER);
+        if (identifier.has_value()) {
+            return get_variable_type(identifier.value().text);
+        }
+        return std::nullopt;
+    }
+
+    std::optional<functiontype> parser::expect_token_function_type() {
+        std::optional<token> identifier = expect_token_type(TOKEN_TYPE_IDENTIFIER);
+        if (identifier.has_value()) {
+            return get_function_type(identifier.value().text);
+        }
+        return std::nullopt;
+    }
+
+    std::optional<bool> parser::expect_boolean_value() {
+        std::optional<token> identifier = expect_token_type(TOKEN_TYPE_IDENTIFIER);
+        if (identifier.has_value()) {
+            bool value;
+            if (identifier.value().text == "true") {
+                value = true;
+            } else if (identifier.value().text == "false") {
+                value = false;
+            }
+        }
+        return std::nullopt;
+    }
+
     bool parser::expect_function_definition() {
         std::vector<token>::iterator parseStart = currentToken;
-        auto functionType = expect_token_type(TOKEN_TYPE_IDENTIFIER);
-        if (functionType.has_value() && functionType.value().text == "void") {
+        auto functionType = expect_token_function_type();
+        llvm::Type *returnType = nullptr;
+        switch (functionType.value()) {
+            case FUNCTION_TYPE_VOID:
+                returnType = llvm::Type::getVoidTy(turbolang::compilermanager::llvmContext);
+                break;
+            case FUNCTION_TYPE_BYTE:
+                returnType = llvm::Type::getInt8Ty(turbolang::compilermanager::llvmContext);
+                break;
+            case FUNCTION_TYPE_SHORT:
+                returnType = llvm::Type::getInt16Ty(turbolang::compilermanager::llvmContext);
+                break;
+            case FUNCTION_TYPE_INT:
+                returnType = llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext);
+                break;
+            case FUNCTION_TYPE_LONG:
+                returnType = llvm::Type::getInt64Ty(turbolang::compilermanager::llvmContext);
+                break;
+            case FUNCTION_TYPE_STRING:
+                returnType = nullptr;
+                //TODO
+                break;
+        }
+        if (functionType.has_value()) {
             auto functionName = expect_token_type(TOKEN_TYPE_IDENTIFIER);
-            if (functionName.has_value() && functionName.value().text == "main") {
+            if (functionName.has_value()) {
                 auto openingParenthesis = expect_token_type(TOKEN_TYPE_OPERATOR, "(");
                 if (openingParenthesis.has_value()) {
                     functiondefinition functionDefinition;
                     functionDefinition.name = functionName.value().text;
-
+                    functionDefinition.type = functionType.value();
                     while (!expect_token_type(TOKEN_TYPE_OPERATOR, ")").has_value()) {
                         auto parameterType = expect_token();
 
@@ -88,14 +139,57 @@ namespace turbolang {
                                     "Expected ',' to separate parameters or ')' to end the parameter list!");
                         }
                     }
+                    std::vector<llvm::Type *> params;
+                    params.reserve(functionDefinition.parameters.size());
+                    llvm::Type *type = nullptr;
+                    for (const parameterdefinition &param : functionDefinition.parameters) {
+                        switch (param.type) {
+                            case VARIABLE_TYPE_BYTE:
+                                type = llvm::Type::getInt8Ty(turbolang::compilermanager::llvmContext);
+                                break;
+                            case VARIABLE_TYPE_SHORT:
+                                type = llvm::Type::getInt16Ty(turbolang::compilermanager::llvmContext);
+                                break;
+                            case VARIABLE_TYPE_INT:
+                                type = llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext);
+                                break;
+                            case VARIABLE_TYPE_LONG:
+                                type = llvm::Type::getInt64Ty(turbolang::compilermanager::llvmContext);
+                                break;
+                            case VARIABLE_TYPE_STRING:
+                                type = llvm::Type::getInt8PtrTy(turbolang::compilermanager::llvmContext, 0);
+                                //TODO
+                                break;
+                        }
+
+                        params.push_back(type);
+                    }
+                    functionDefinition.load(returnType, params);
+                    compilermanager::llvmIRBuilder.SetInsertPoint(functionDefinition.entry);
+
+                    llvm::Function* llvmFunction = turbolang::compilermanager::llvmModule->getFunction(functionDefinition.name);
+
+                    int index = 0;
+                    for (auto arg = llvmFunction->arg_begin(); arg != llvmFunction->arg_end(); arg++) {
+                        llvm::errs() << "created argument: with type: " << *arg << ", but no value has been assigned\n";
+                        valueargumentwrapper argumentData;
+                        argumentData.name = functionDefinition.parameters[index].name;
+                        functionDefinition.arguments.push_back(argumentData);
+                        index++;
+                    }
+
+                    turbolang::compilermanager::functions[functionDefinition.name] = functionDefinition;
+                    currentFuncName = functionDefinition.name;
 
                     std::optional<std::vector<statement>> statements = parse_function_body();
+                    if (functionDefinition.type == FUNCTION_TYPE_VOID) {
+                        turbolang::compilermanager::llvmIRBuilder.CreateRet(nullptr);
+                    }
                     if (!statements.has_value()) {
                         currentToken = parseStart;
                         return false;
                     }
-                    turbolang::compilermanager::functions[functionDefinition.name] = functionDefinition;
-                    currentFuncName = functionDefinition.name;
+
                     return true;
                 } else {
                     std::cout << currentToken->text << std::endl;
@@ -137,6 +231,7 @@ namespace turbolang {
         }
 
         if (!expect_token_type(TOKEN_TYPE_OPERATOR, "}").has_value()) {
+            std::cout << currentToken->text << std::endl;
             throw std::runtime_error("Unbalanced '}'. Line: " + std::to_string(currentToken->lineNumber));
         }
         return statements;
@@ -149,19 +244,29 @@ namespace turbolang {
         auto typeToken = expect_token_type(
                 TOKEN_TYPE_IDENTIFIER);//COULD BE VARIABLE DECLARATION OR VARIABLE MODIFICATION OR FUNCTION CALL
         if (typeToken.has_value()) {
-            if (get_variable_type(typeToken.value().text).has_value()) { //TODO support custom classes as types
+            if (get_variable_type(typeToken.value().text).has_value()) { //TODO support custom classes as types, support strings
                 //IT IS A VARIABLE DECLARATION
                 parseVariableDeclaration(statement, typeToken.value());
                 return statement;
             } else {
-                auto equalsOperator = expect_token_type(TOKEN_TYPE_OPERATOR, "=");
-                if (equalsOperator.has_value()) {
-                    //IT IS A VARIABLE MODIFICATION. We pass in variable name
-                    parseVariableModification(statement, typeToken);
+                //TODO we need the value not try optimise to get the literal  value at compile time. breakpoint at get variable by name in function definition
+                //IDENTIFIER
+                if (typeToken.value().text == "while") {
+                    parseWhileLoop(statement);
+                    return statement;
+                } else if (typeToken.value().text == "return") {
+                    parseReturn(statement);
                     return statement;
                 } else {
-                    //IT IS A FUNCTION CALL. We pass in the function name
-                    parseFunctionCall(statement, typeToken);
+                    auto equalsOperator = expect_token_type(TOKEN_TYPE_OPERATOR, "=");
+                    if (equalsOperator.has_value()) {
+                        //IT IS A VARIABLE MODIFICATION. We pass in variable name
+                        parseVariableModification(statement, typeToken);
+
+                    } else {
+                        //IT IS A FUNCTION CALL. We pass in the function name
+                        parseFunctionCall(statement, typeToken.value().text);
+                    }
                     return statement;
                 }
             }
@@ -187,16 +292,48 @@ namespace turbolang {
                         llvm::AllocaInst *allocaInst = nullptr;
                         llvm::Constant *arraySize;
                         llvm::Value *allocatedValue = nullptr;
+                        bool checkedForSemiColon = false;
                         switch (variableValueToken.value().type) {
                             case TOKEN_TYPE_IDENTIFIER:
-                                allocaInst = turbolang::compilermanager::functions[currentFuncName].allocaMap[variableValueToken.value().text];
-                                allocatedValue = turbolang::compilermanager::functions[currentFuncName].variableMap[variableValueToken.value().text];
+                                allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(
+                                        variableValueToken.value().text);
+                                if (expect_token_type(TOKEN_TYPE_OPERATOR, "(").has_value()) {
+                                    //ITS A FUNCTION CALL!
+                                    currentToken--;
+                                    allocatedValue = parseFunctionCall(statement, variableValueToken.value().text);
+                                    checkedForSemiColon = true;
+                                }
+                                else {
+                                    allocatedValue = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
+                                            variableValueToken.value().text);
+                                }
+                                type = allocatedValue->getType();
+                                arraySize = llvm::ConstantInt::get(type, llvm::APInt(32, 9));
+                                //TODO get allocatedValue value
+                                std::cout << "ok" << std::endl;
                                 break;
                             case TOKEN_TYPE_INTEGER_LITERAL:
-                                type = llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext);
-                                arraySize = llvm::ConstantInt::get(
-                                        type,
-                                        llvm::APInt(32, std::stoi(variableValueToken.value().text)));
+                                if (varType.value() == VARIABLE_TYPE_BYTE) {
+                                    type = llvm::Type::getInt8Ty(turbolang::compilermanager::llvmContext);
+                                    arraySize = llvm::ConstantInt::get(
+                                            type,
+                                            llvm::APInt(8, std::stoi(variableValueToken.value().text)));
+                                } else if (varType.value() == VARIABLE_TYPE_SHORT) {
+                                    type = llvm::Type::getInt16Ty(turbolang::compilermanager::llvmContext);
+                                    arraySize = llvm::ConstantInt::get(
+                                            type,
+                                            llvm::APInt(16, std::stoi(variableValueToken.value().text)));
+                                } else if (varType.value() == VARIABLE_TYPE_INT) {
+                                    type = llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext);
+                                    arraySize = llvm::ConstantInt::get(
+                                            type,
+                                            llvm::APInt(32, std::stoi(variableValueToken.value().text)));
+                                } else if (varType.value() == VARIABLE_TYPE_LONG) {
+                                    type = llvm::Type::getInt64Ty(turbolang::compilermanager::llvmContext);
+                                    arraySize = llvm::ConstantInt::get(
+                                            type,
+                                            llvm::APInt(64, std::stol(variableValueToken.value().text)));
+                                }
                                 break;
                             case TOKEN_TYPE_DOUBLE_LITERAL:
                                 type = llvm::Type::getDoubleTy(turbolang::compilermanager::llvmContext);
@@ -205,8 +342,8 @@ namespace turbolang {
                                         llvm::APFloat(std::stod(variableValueToken.value().text)));
                                 break;
                             case TOKEN_TYPE_STRING_LITERAL:
-                                arraySize = turbolang::compilermanager::llvmIRBuilder.CreateGlobalStringPtr(
-                                        variableValueToken.value().text);
+                                arraySize = llvm::ConstantDataArray::getString(turbolang::compilermanager::llvmContext, variableValueToken.value().text, false);
+                                type = arraySize->getType();
                                 break;
                             default:
                                 throw std::runtime_error("Unsupported variable value token!");
@@ -215,12 +352,12 @@ namespace turbolang {
                             allocaInst = turbolang::compilermanager::llvmIRBuilder.CreateAlloca(type, arraySize, twine);
                         }
                         if (allocatedValue == nullptr) {
-                            allocatedValue = allocaInst->getOperand(
-                                    0);
+                            allocatedValue = allocaInst->getOperand(0);
                         }
-                        turbolang::compilermanager::functions[currentFuncName].variableMap[variableNameToken.value().text] = allocatedValue;
-                        turbolang::compilermanager::functions[currentFuncName].allocaMap[variableNameToken.value().text] = allocaInst;
-                        if (!expect_token_type(TOKEN_TYPE_OPERATOR, ";").has_value()) {
+                        turbolang::compilermanager::functions[currentFuncName].set_variable_by_name(
+                                variableNameToken.value().text, allocatedValue);
+                        turbolang::compilermanager::functions[currentFuncName].set_alloca_instance(variableNameToken.value().text, allocaInst);
+                        if (!checkedForSemiColon && !expect_token_type(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                             throw std::runtime_error("Expected a semicolon!");
                         }
                     }
@@ -239,11 +376,13 @@ namespace turbolang {
             statement.name = variableNameToken.value().text;
             llvm::Type *type = nullptr;
             llvm::Constant *arraySize = nullptr;
-            llvm::Value* val = nullptr;
+            llvm::Value *val = nullptr;
             switch (variableValueToken.value().type) {
                 case TOKEN_TYPE_IDENTIFIER:
-                    type = turbolang::compilermanager::functions[currentFuncName].variableMap[variableValueToken.value().text]->getType();
-                    val = turbolang::compilermanager::functions[currentFuncName].variableMap[variableValueToken.value().text];
+                    type = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
+                            variableValueToken.value().text)->getType();
+                    val = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
+                            variableValueToken.value().text);
                     break;
                 case TOKEN_TYPE_INTEGER_LITERAL:
                     type = llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext);
@@ -264,30 +403,30 @@ namespace turbolang {
                 default:
                     throw std::runtime_error("Unsupported variable value token!");
             }
-            auto allocaInst = turbolang::compilermanager::functions[currentFuncName].allocaMap[variableNameToken.value().text];
+            auto allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(variableNameToken.value().text);
             if (val == nullptr) {
-            auto storeInst = turbolang::compilermanager::llvmIRBuilder.CreateStore(
-                    arraySize, allocaInst,
-                    false);
+                auto storeInst = turbolang::compilermanager::llvmIRBuilder.CreateStore(
+                        arraySize, allocaInst,
+                        false);
 
                 val = storeInst->getOperand(0);
             }
-            turbolang::compilermanager::functions[currentFuncName].variableMap[variableNameToken.value().text] = val;
+            turbolang::compilermanager::functions[currentFuncName].set_variable_by_name(variableNameToken.value().text,
+                                                                                        val);
             if (!expect_token_type(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
             }
         }
     }
 
-    void parser::parseFunctionCall(statement &statement,
-                                   const std::optional<token> &functionName) {
+    llvm::Value* parser::parseFunctionCall(statement &statement,
+                                   const std::string &functionName) {
         auto openingParenthesisOperator = expect_token_type(TOKEN_TYPE_OPERATOR, "(");
         if (openingParenthesisOperator.has_value()) {
             std::vector<token> arguments;
             while (!expect_token_type(TOKEN_TYPE_OPERATOR, ")").has_value()) {
                 auto parameter = expect_token();
                 if (!parameter.has_value()) {
-
                     break;
                 }
 
@@ -308,13 +447,31 @@ namespace turbolang {
             if (!expect_token_type(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                 std::cerr << "Expected a semicolon at line " << currentToken->lineNumber << std::endl;
             }
-
+            functioncallprocessor *funcCallProcessor = turbolang::compilermanager::functionCallProcessorMap[functionName];
+            turbolang::functiondefinition targetFunction = funcCallProcessor == nullptr ? turbolang::compilermanager::functions[functionName] :
+                                                           turbolang::compilermanager::functions[currentFuncName];
+            llvm::Function* function = turbolang::compilermanager::llvmModule->getFunction(targetFunction.name);
+            int index = 0;
+            for (auto arg = function->arg_begin(); arg != function->arg_end(); arg++) {
+                if (auto *argValue = llvm::dyn_cast<llvm::Value>(arg)) {
+                    targetFunction.arguments[index].value = argValue;
+                    std::cout << targetFunction.arguments[index].name << " is name we are modifying value of " << std::endl;
+                }
+                index++;
+            }
+            if (funcCallProcessor == nullptr) {
+                turbolang::compilermanager::functions[functionName] = targetFunction;
+            }
+            else {
+                turbolang::compilermanager::functions[currentFuncName] = targetFunction;
+            }
             std::vector<llvm::Value *> llvmFunctionArguments;
             for (const auto &argument : arguments) {
                 llvm::Value *llvmFunctionArgument = nullptr;
                 switch (argument.type) {
                     case TOKEN_TYPE_IDENTIFIER:
-                        llvmFunctionArgument = turbolang::compilermanager::functions[currentFuncName].variableMap[argument.text];
+                        llvmFunctionArgument = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
+                                argument.text);//TODO
                         break;
                     case TOKEN_TYPE_INTEGER_LITERAL:
                         //TODO create byte, short, long
@@ -337,8 +494,50 @@ namespace turbolang {
                     llvmFunctionArguments.push_back(llvmFunctionArgument);
                 }
             }
-            turbolang::compilermanager::functionCallProcessorMap[functionName.value().text]->process(
-                    turbolang::compilermanager::functions[currentFuncName], llvmFunctionArguments);
+            //was here
+            if (funcCallProcessor == nullptr) {
+               return  turbolang::functioncallprocessor::external_func_process(targetFunction,
+                        llvmFunctionArguments);
+            } else {
+                return funcCallProcessor->process(targetFunction, llvmFunctionArguments);
+            }
+        }
+        return nullptr;
+    }
+
+    void parser::parseWhileLoop(statement &statement) {
+        auto openingParenthesis = expect_token_type(TOKEN_TYPE_OPERATOR, "(");
+        if (openingParenthesis.has_value()) {
+            auto booleanValue = expect_boolean_value(); //boolean literal
+            if (booleanValue.has_value()) {
+                //TODO learn llvm kek
+            } else {
+                //VARIABLE
+                //TODO handle math expressions
+
+            }
+        }
+    }
+
+    void parser::parseReturn(statement &statement) {
+        auto returnValue = expect_token();
+        llvm::Value *llvmReturnValue = nullptr;
+        if (returnValue.has_value()) {
+            if (returnValue.value().type == TOKEN_TYPE_IDENTIFIER && returnValue.value().text == "void") {
+                llvmReturnValue = nullptr;
+                //Return void instruction in LLVM
+            }
+            else if (returnValue.value().type == TOKEN_TYPE_OPERATOR && returnValue.value().text == ";") {
+                turbolang::compilermanager::llvmIRBuilder.CreateRetVoid();
+                return;
+            }
+            else {
+                llvmReturnValue = llvm::ConstantInt::get(turbolang::compilermanager::llvmContext,llvm::APInt(32, std::stoi(returnValue.value().text)));
+            }
+            turbolang::compilermanager::llvmIRBuilder.CreateRet(llvmReturnValue);
+        }
+        if (!expect_token_type(TOKEN_TYPE_OPERATOR, ";").has_value()) {
+            throw std::runtime_error("Expected semicolon!");
         }
     }
 }

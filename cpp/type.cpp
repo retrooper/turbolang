@@ -10,13 +10,20 @@ namespace turbolang {
             return VARIABLE_TYPE_INT;
         } else if (name == "long") {
             return VARIABLE_TYPE_LONG;
-        } else {
+        }
+        else if (name == "string") {
+            return VARIABLE_TYPE_STRING;
+        }
+        else {
             return std::nullopt;
         }
     }
 
     std::optional<functiontype> get_function_type(const std::string &name) {
-        if (name == "byte") {
+        if (name == "void") {
+            return FUNCTION_TYPE_VOID;
+        }
+        else if (name == "byte") {
             return FUNCTION_TYPE_BYTE;
         } else if (name == "short") {
             return FUNCTION_TYPE_SHORT;
@@ -24,7 +31,11 @@ namespace turbolang {
             return FUNCTION_TYPE_INT;
         } else if (name == "long") {
             return FUNCTION_TYPE_LONG;
-        } else {
+        }
+        else if (name == "string") {
+            return FUNCTION_TYPE_STRING;
+        }
+        else {
             return std::nullopt;
         }
     }

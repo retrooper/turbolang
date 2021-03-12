@@ -5,7 +5,7 @@ namespace turbolang {
         std::vector<token> tokens;
         struct token currentToken;
         currentToken.lineNumber = 1;
-
+        int commentLine = -1;
         for (char currChar : code) {
             if (currentToken.type == TOKEN_TYPE_STRING_ESCAPE_SEQUENCE) {
                 switch (currChar) {
@@ -40,30 +40,34 @@ namespace turbolang {
                 case '7':
                 case '8':
                 case '9':
-                    if (currentToken.type == TOKEN_TYPE_WHITESPACE) {
-                        currentToken.type = TOKEN_TYPE_INTEGER_LITERAL;
-                        currentToken.text.append(1, currChar);
-                    } else if (currentToken.type == TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL) {
-                        currentToken.type = TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL;
-                        currentToken.text.append(1, currChar);
-                    } else {
-                        currentToken.text.append(1, currChar);
+                    if (currentToken.lineNumber != commentLine) {
+                        if (currentToken.type == TOKEN_TYPE_WHITESPACE) {
+                            currentToken.type = TOKEN_TYPE_INTEGER_LITERAL;
+                            currentToken.text.append(1, currChar);
+                        } else if (currentToken.type == TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL) {
+                            currentToken.type = TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL;
+                            currentToken.text.append(1, currChar);
+                        } else {
+                            currentToken.text.append(1, currChar);
+                        }
                     }
                     break;
                 case '.':
-                    if (currentToken.type == TOKEN_TYPE_WHITESPACE) {
-                        currentToken.type = TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL;
-                        currentToken.text.append(1, currChar);
-                    } else if (currentToken.type == TOKEN_TYPE_INTEGER_LITERAL) {
-                        currentToken.type = TOKEN_TYPE_DOUBLE_LITERAL;
-                        currentToken.text.append(1, currChar); //was not
-                    } else if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
-                        currentToken.text.append(1, currChar);
-                    } else {
-                        endToken(&currentToken, &tokens);
-                        currentToken.type = TOKEN_TYPE_OPERATOR;
-                        currentToken.text.append(1, currChar);
-                        endToken(&currentToken, &tokens);
+                    if (currentToken.lineNumber != commentLine) {
+                        if (currentToken.type == TOKEN_TYPE_WHITESPACE) {
+                            currentToken.type = TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL;
+                            currentToken.text.append(1, currChar);
+                        } else if (currentToken.type == TOKEN_TYPE_INTEGER_LITERAL) {
+                            currentToken.type = TOKEN_TYPE_DOUBLE_LITERAL;
+                            currentToken.text.append(1, currChar); //was not
+                        } else if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
+                            currentToken.text.append(1, currChar);
+                        } else {
+                            endToken(&currentToken, &tokens);
+                            currentToken.type = TOKEN_TYPE_OPERATOR;
+                            currentToken.text.append(1, currChar);
+                            endToken(&currentToken, &tokens);
+                        }
                     }
                     break;
 
@@ -76,19 +80,20 @@ namespace turbolang {
                 case ':':
                 case ',':
                 case ';':
-                    if (currentToken.type != TOKEN_TYPE_STRING_LITERAL) {
-                        endToken(&currentToken, &tokens);
-                        currentToken.type = TOKEN_TYPE_OPERATOR;
-                        currentToken.text.append(1, currChar);
-                        endToken(&currentToken, &tokens);//was not
-                    } else {
-                        currentToken.text.append(1, currChar);
+                    if (currentToken.lineNumber != commentLine) {
+                        if (currentToken.type != TOKEN_TYPE_STRING_LITERAL) {
+                            endToken(&currentToken, &tokens);
+                            currentToken.type = TOKEN_TYPE_OPERATOR;
+                            currentToken.text.append(1, currChar);
+                            endToken(&currentToken, &tokens);//was not
+                        } else {
+                            currentToken.text.append(1, currChar);
+                        }
                     }
                     break;
                 case ' ':
                 case '\t':
-                    if (currentToken.type == TOKEN_TYPE_STRING_LITERAL
-                        || currentToken.type == TOKEN_TYPE_COMMENT) {
+                    if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
                         currentToken.text.append(1, currChar);
                     } else {
                         endToken(&currentToken, &tokens);
@@ -101,11 +106,13 @@ namespace turbolang {
                     break;
 
                 case '"':
-                    if (currentToken.type != TOKEN_TYPE_STRING_LITERAL) {
-                        endToken(&currentToken, &tokens);
-                        currentToken.type = TOKEN_TYPE_STRING_LITERAL;
-                    } else if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
-                        endToken(&currentToken, &tokens);
+                    if (currentToken.lineNumber != commentLine) {
+                        if (currentToken.type != TOKEN_TYPE_STRING_LITERAL) {
+                            endToken(&currentToken, &tokens);
+                            currentToken.type = TOKEN_TYPE_STRING_LITERAL;
+                        } else if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
+                            endToken(&currentToken, &tokens);
+                        }
                     }
                     break;
 
@@ -119,26 +126,18 @@ namespace turbolang {
                         endToken(&currentToken, &tokens);
                     }
                     break;
-
-                case '#':
-                    if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
-                        currentToken.text.append(1, currChar);
-                    } else {
-                        currentToken.type = TOKEN_TYPE_COMMENT;
-                        currentToken.text.erase();
-                    }
-                    break;
-
                 default:
-                    //IDENTIFIER
-                    if (currentToken.type == TOKEN_TYPE_WHITESPACE
-                        || currentToken.type == TOKEN_TYPE_INTEGER_LITERAL ||
-                        currentToken.type == TOKEN_TYPE_DOUBLE_LITERAL) {
-                        endToken(&currentToken, &tokens);
-                        currentToken.type = TOKEN_TYPE_IDENTIFIER;
-                        currentToken.text.append(1, currChar);
-                    } else {
-                        currentToken.text.append(1, currChar);
+                    if (currentToken.lineNumber != commentLine) {
+                        //IDENTIFIER
+                        if (currentToken.type == TOKEN_TYPE_WHITESPACE
+                            || currentToken.type == TOKEN_TYPE_INTEGER_LITERAL ||
+                            currentToken.type == TOKEN_TYPE_DOUBLE_LITERAL) {
+                            endToken(&currentToken, &tokens);
+                            currentToken.type = TOKEN_TYPE_IDENTIFIER;
+                            currentToken.text.append(1, currChar);
+                        } else {
+                            currentToken.text.append(1, currChar);
+                        }
                     }
                     break;
             }
@@ -149,9 +148,7 @@ namespace turbolang {
     }
 
     void tokenizer::endToken(token *token, std::vector<turbolang::token> *tokens) {
-        if (token->type == TOKEN_TYPE_COMMENT) {
-            std::cout << "IGNORING COMMENT " << token->text << std::endl;
-        } else if (token->type != TOKEN_TYPE_WHITESPACE) {
+      if (token->type != TOKEN_TYPE_WHITESPACE) {
             tokens->push_back(*token);
         } else if (token->type == TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL) {
             if (token->text == ".") {
@@ -170,10 +167,4 @@ namespace turbolang {
                   << lineNumber << std::endl;
     }
 
-    std::string token::to_string() {
-        if (type == TOKEN_TYPE_STRING_LITERAL) {
-            return "\"" + text + "\"";
-        }
-        return text;
-    }
 }

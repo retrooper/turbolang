@@ -11,11 +11,9 @@ void turbolang::exiter::prepare_exiter() {
                            turbolang::compilermanager::llvmModule.get());
 }
 
-void turbolang::exiter::exit(int code) {
+void turbolang::exiter::exit(llvm::Value* exitCodeValue) {
     std::vector<llvm::Value*> args;
     args.reserve(1);
-    llvm::Value* exitCodeValue = llvm::ConstantInt::get(turbolang::compilermanager::llvmContext, llvm::APInt(32, code));
     args.push_back(exitCodeValue);
     turbolang::compilermanager::llvmIRBuilder.CreateCall(turbolang::compilermanager::llvmModule->getFunction("exit"), args);
-
 }

@@ -14,8 +14,7 @@ namespace turbolang {
         TOKEN_TYPE_DOUBLE_LITERAL,
         TOKEN_TYPE_STRING_LITERAL,
         TOKEN_TYPE_OPERATOR,
-        TOKEN_TYPE_STRING_ESCAPE_SEQUENCE,
-        TOKEN_TYPE_COMMENT
+        TOKEN_TYPE_STRING_ESCAPE_SEQUENCE
     };
 
     static const char *TOKEN_TYPE_STRINGS[] = {
@@ -36,7 +35,6 @@ namespace turbolang {
         size_t lineNumber{0};
 
         void debug() const;
-        std::string to_string();
     };
 
 

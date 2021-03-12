@@ -8,7 +8,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "parser/parser.h"
 #include "data/functioncallprocessor.h"
-#include "data/functiondefinition.h"
 #include <string>
 
 namespace turbolang {
@@ -18,8 +17,6 @@ namespace turbolang {
         static llvm::LLVMContext llvmContext;
         static llvm::IRBuilder<> llvmIRBuilder;
         static std::unique_ptr<llvm::Module> llvmModule;
-        static llvm::FunctionType *llvmMainFunctionType;
-        static llvm::Function *llvmMainFunction;
         static std::map<std::string, class functioncallprocessor*> functionCallProcessorMap;
         static std::map<std::string, functiondefinition> functions;
         static void prepare();

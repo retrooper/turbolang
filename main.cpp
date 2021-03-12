@@ -17,7 +17,19 @@ void run() {
         std::string line;
         if (sourceFile.is_open()) {
             while (getline(sourceFile, line)) {
-                code += line;
+                bool commentFound = false;
+               for (const char& character : line) {
+                    if (character == ' ') {
+                        continue;
+                    }
+                    if (character == '#') {
+                        commentFound = true;
+                        break;
+                    }
+               }
+               if (!commentFound) {
+                   code += line;
+               }
             }
             sourceFile.close();
         }
@@ -43,7 +55,7 @@ void run() {
     std::cout << "Generated binary!" << std::endl;
     std::cout << "Executing binary..." << std::endl;
     turbolang::compilermanager::execute_binary();
-    std::cout << "Finished executing the binary!" << std::endl;
+    std::cout << "\nFinished executing the binary!" << std::endl;
 }
 
 int main() {
