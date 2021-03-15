@@ -1,9 +1,12 @@
 int main() {
+    #added while loops
     while (true) {
-        println("yes");
-        sleep(1000);
+        println("Yes");
+        #Added sleeping
+        int timeInNS = 1000000000;
+        #one second in nanoseconds
+        sleep(timeInNS);
+        #yes in nanoseconds
     }
     return 0;
 }
-
-#TODO FIX DOUBLES, FIX BYTES IN ARGUMENTS AND TEST AROUND WITH OTHER DATA TYPES, FIX "\N" IN STRINGS

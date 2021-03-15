@@ -14,7 +14,7 @@ namespace turbolang {
 
     void sleeper::sleep(llvm::Value *arg) {
         llvm::Value *thousandValue = llvm::ConstantInt::get(compilermanager::llvmIRBuilder.getInt32Ty(), 1000);
-        llvm::Value* sleepArg = compilermanager::llvmIRBuilder.CreateMul(arg, thousandValue);
+        llvm::Value* sleepArg = compilermanager::llvmIRBuilder.CreateSDiv(arg, thousandValue);
         compilermanager::llvmIRBuilder.CreateCall(compilermanager::llvmModule->getFunction("usleep"), sleepArg);
     }
 }
