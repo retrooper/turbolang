@@ -9,9 +9,6 @@ namespace turbolang {
         for (char currChar : code) {
             if (currentToken.type == TOKEN_TYPE_STRING_ESCAPE_SEQUENCE) {
                 switch (currChar) {
-                    case 'n':
-                        currentToken.text.append(1, '\n');
-                        break;
                     case 't':
                         currentToken.text.append(1, '\t');
                         break;

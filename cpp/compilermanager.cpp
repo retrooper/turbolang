@@ -43,10 +43,10 @@ void turbolang::compilermanager::generate_binary() {
 
     std::string binary_path = base_path + "/binary";
     std::filesystem::current_path(binary_path);
-    system("clang ../bytecode/output.ll");
+    system("clang ../bytecode/output.ll -Ofast");
     std::filesystem::current_path(base_path);
 }
 
 void turbolang::compilermanager::execute_binary() {
-    system("./binary/a.out");
+    system("bash binary/timer.sh ./binary/a.out");
 }

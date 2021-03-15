@@ -8,6 +8,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "parser/parser.h"
 #include "data/functioncallprocessor.h"
+#include <filesystem>
 #include <string>
 
 namespace turbolang {

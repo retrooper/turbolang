@@ -1,10 +1,7 @@
 #include "utils/timeutil.h"
 auto startTime = std::chrono::high_resolution_clock::now();
 long turbolang::get_current_nano() {
-    auto now = std::chrono::high_resolution_clock::now();
-    auto since_epoch = now - startTime;
-    auto nano = std::chrono::duration_cast<std::chrono::nanoseconds>(since_epoch);
-    return nano.count();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - startTime).count();
 }
 
 long turbolang::get_current_millis() {

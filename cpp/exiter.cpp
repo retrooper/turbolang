@@ -1,12 +1,11 @@
 #include "utils/exiter.h"
 
 void turbolang::exiter::prepare_exiter() {
-    /*Declare that printf exists and has signature int (i8*, ...)**/
     std::vector<llvm::Type *> args;
     args.push_back(llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext));
-    /*`true` specifies the function as variadic*/
+    bool isFunctionArgumentSizeConstant = true;
     llvm::FunctionType *printfType =
-            llvm::FunctionType::get(turbolang::compilermanager::llvmIRBuilder.getInt32Ty(), args, true);
+            llvm::FunctionType::get(turbolang::compilermanager::llvmIRBuilder.getInt32Ty(), args, !isFunctionArgumentSizeConstant);
     llvm::Function::Create(printfType, llvm::Function::ExternalLinkage, "exit",
                            turbolang::compilermanager::llvmModule.get());
 }

@@ -1,12 +1,13 @@
-int customprint() {
-    int a = 20;
-    return 20;
-    #TODO allow variables to be returned, doubles, byte modfying when passed as arg afterwarda ;-;, test a ton! string
-}
-
-
+#Main function, called when the program starts(entry function)
 int main() {
-    int value = customprint();
-    printf("%s%i", "We got: ", value);
-   return 0;
+    while (true) {
+        println("running loop");
+        while (true) {
+            println("yea");
+        }
+    }
+    println("exited");
+    return 0;
 }
+
+#TODO FIX DOUBLES, FIX BYTES IN ARGUMENTS AND TEST AROUND WITH OTHER DATA TYPES, FIX "\N" IN STRINGS

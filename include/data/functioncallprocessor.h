@@ -15,6 +15,10 @@ namespace turbolang {
         llvm::Value* process(functiondefinition& currentFunction, std::vector<llvm::Value*>& arguments) override;
     };
 
+    class printlncallprocessor : public functioncallprocessor {
+        llvm::Value* process(functiondefinition& currentFunction, std::vector<llvm::Value*>& arguments) override;
+    };
+
     class exitcallprocessor : public functioncallprocessor {
         llvm::Value* process(functiondefinition& currentFunction, std::vector<llvm::Value*>& arguments) override;
     };
