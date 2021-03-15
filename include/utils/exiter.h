@@ -4,7 +4,7 @@
 namespace turbolang {
     class exiter {
     public:
-        static void prepare_exiter();
+        static void prepare();
         static void exit(llvm::Value* exitCodeValue);
     };
 }

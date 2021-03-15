@@ -6,6 +6,7 @@ namespace turbolang {
         turbolang::compilermanager::functionCallProcessorMap["printf"] = new turbolang::printfcallprocessor();
         turbolang::compilermanager::functionCallProcessorMap["println"] = new turbolang::printlncallprocessor();
         turbolang::compilermanager::functionCallProcessorMap["exit"] = new turbolang::exitcallprocessor();
+        turbolang::compilermanager::functionCallProcessorMap["sleep"] = new turbolang::sleepercallprocessor();
     }
 
     void parser::parse(std::vector<token> &tokens) {
@@ -528,7 +529,6 @@ namespace turbolang {
                         llvm::BasicBlock *preHeaderBasicBlock = compilermanager::llvmIRBuilder.GetInsertBlock();
                         llvm::BasicBlock *loop = llvm::BasicBlock::Create(compilermanager::llvmContext, "loop",
                                                                           function.llvmFunction);
-                        std::cout << "second?" << std::endl;
                         compilermanager::llvmIRBuilder.CreateBr(loop);
                         compilermanager::llvmIRBuilder.SetInsertPoint(loop);
 

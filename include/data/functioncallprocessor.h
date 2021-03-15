@@ -1,5 +1,6 @@
 #pragma once
 #include "utils/printer.h"
+#include "utils/sleeper.h"
 #include "tokenizer/tokenizer.h"
 #include <string>
 namespace turbolang {
@@ -16,6 +17,10 @@ namespace turbolang {
     };
 
     class printlncallprocessor : public functioncallprocessor {
+        llvm::Value* process(functiondefinition& currentFunction, std::vector<llvm::Value*>& arguments) override;
+    };
+
+    class sleepercallprocessor : public functioncallprocessor {
         llvm::Value* process(functiondefinition& currentFunction, std::vector<llvm::Value*>& arguments) override;
     };
 

@@ -1,15 +1,20 @@
 #include "utils/sleeper.h"
 
-void turbolang::sleeper::sleep(long ms) {
-    /*Declare that printf exists and has signature int (i8*, ...)**/
-    std::vector<llvm::Type *> args;
-    args.push_back(llvm::Type::getInt64PtrTy(turbolang::compilermanager::llvmContext));
-    /*`true` specifies the function as variadic*/
-    llvm::FunctionType *msChronoType =
-            llvm::FunctionType::get(turbolang::compilermanager::llvmIRBuilder.getCurrentFunctionReturnType(),  args, true);
+namespace turbolang {
+    void sleeper::prepare() {
+        std::vector<llvm::Type *> args;
+        args.push_back(llvm::Type::getInt32Ty(compilermanager::llvmContext));
 
-    llvm::Function::Create(msChronoType, llvm::Function::ExternalLinkage, "milliseconds",
-                           turbolang::compilermanager::llvmModule.get());
+        bool doesFunctionSizeVary = false;
+        llvm::FunctionType *putsType =
+                llvm::FunctionType::get(compilermanager::llvmIRBuilder.getInt32Ty(), args, doesFunctionSizeVary);
+        llvm::Function::Create(putsType, llvm::Function::ExternalLinkage, "usleep",
+                               turbolang::compilermanager::llvmModule.get());
+    }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    void sleeper::sleep(llvm::Value *arg) {
+        llvm::Value *thousandValue = llvm::ConstantInt::get(compilermanager::llvmIRBuilder.getInt32Ty(), 1000);
+        llvm::Value* sleepArg = compilermanager::llvmIRBuilder.CreateMul(arg, thousandValue);
+        compilermanager::llvmIRBuilder.CreateCall(compilermanager::llvmModule->getFunction("usleep"), sleepArg);
+    }
 }

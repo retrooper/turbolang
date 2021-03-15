@@ -1,12 +1,8 @@
-#Main function, called when the program starts(entry function)
 int main() {
     while (true) {
-        println("running loop");
-        while (true) {
-            println("yea");
-        }
+        println("yes");
+        sleep(1000);
     }
-    println("exited");
     return 0;
 }
 

@@ -27,4 +27,9 @@ namespace turbolang {
         turbolang::exiter::exit(arguments[0]);
         return nullptr;
     }
+
+    llvm::Value *
+    sleepercallprocessor::process(functiondefinition &currentFunction, std::vector<llvm::Value *> &arguments) {
+        turbolang::sleeper::sleep(arguments[0]);
+    }
 }

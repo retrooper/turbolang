@@ -1,10 +1,11 @@
 #pragma once
 #include "compilermanager.h"
-#include <stdio.h>
+#include <unistd.h>
 #include <thread>
 namespace turbolang {
     class sleeper {
     public:
-        static void sleep(long ms);
+        static void prepare();
+        static void sleep(llvm::Value *arg);
     };
 }

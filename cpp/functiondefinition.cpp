@@ -10,7 +10,6 @@ namespace turbolang {
         llvmFunction = llvm::Function::Create(llvmFunctionType, llvm::Function::ExternalLinkage, name,
                                               compilermanager::llvmModule.get());
         entry = llvm::BasicBlock::Create(compilermanager::llvmContext, "entry", llvmFunction);
-        std::cout << "first" << std::endl;
     }
 
     llvm::Value *functiondefinition::get_variable_by_name(const std::string &name) {

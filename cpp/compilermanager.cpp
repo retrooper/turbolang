@@ -8,8 +8,9 @@ std::map<std::string, turbolang::functioncallprocessor *> turbolang::compilerman
 std::map<std::string, turbolang::functiondefinition> turbolang::compilermanager::functions;
 void turbolang::compilermanager::prepare() {
     llvmModule = std::make_unique<llvm::Module>("inputFile", llvmContext);
-    turbolang::printer::prepare_printer();
-    turbolang::exiter::prepare_exiter();
+    turbolang::printer::prepare();
+    turbolang::exiter::prepare();
+    turbolang::sleeper::prepare();
 }
 
 void turbolang::compilermanager::generate_byte_code(int exitCode) {

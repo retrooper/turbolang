@@ -1,11 +1,11 @@
 #include "utils/exiter.h"
 
-void turbolang::exiter::prepare_exiter() {
+void turbolang::exiter::prepare() {
     std::vector<llvm::Type *> args;
     args.push_back(llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext));
     bool isFunctionArgumentSizeConstant = true;
     llvm::FunctionType *printfType =
-            llvm::FunctionType::get(turbolang::compilermanager::llvmIRBuilder.getInt32Ty(), args, !isFunctionArgumentSizeConstant);
+            llvm::FunctionType::get(turbolang::compilermanager::llvmIRBuilder.getVoidTy(), args, !isFunctionArgumentSizeConstant);
     llvm::Function::Create(printfType, llvm::Function::ExternalLinkage, "exit",
                            turbolang::compilermanager::llvmModule.get());
 }

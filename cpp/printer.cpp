@@ -1,9 +1,8 @@
 #include "utils/printer.h"
 
-void turbolang::printer::prepare_printer(){
+void turbolang::printer::prepare(){
     std::vector<llvm::Type *> args;
     args.push_back(llvm::Type::getInt8PtrTy(turbolang::compilermanager::llvmContext));
-
     bool doesFunctionSizeVary = false;
     llvm::FunctionType *putsType =
             llvm::FunctionType::get(turbolang::compilermanager::llvmIRBuilder.getInt32Ty(), args, doesFunctionSizeVary);
