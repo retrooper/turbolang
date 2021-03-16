@@ -10,11 +10,13 @@
 #include "data/functioncallprocessor.h"
 #include <filesystem>
 #include <string>
+#include <thread>
 
 namespace turbolang {
     class compilermanager {
     public:
         static bool output_to_file;
+        static volatile int tasksFinished;
         static llvm::LLVMContext llvmContext;
         static llvm::IRBuilder<> llvmIRBuilder;
         static std::unique_ptr<llvm::Module> llvmModule;
@@ -25,6 +27,7 @@ namespace turbolang {
         static void cleanup_byte_code(class parser& parser);
         friend class parser;
         static void generate_binary();
+        static void generate_executables();
         static void execute_binary();
     };
 }

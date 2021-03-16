@@ -8,7 +8,7 @@ namespace turbolang {
     class printer {
     public:
         static void prepare();
-        static void printf(const std::vector<llvm::Value *> &values);
-        static void println(const std::vector<llvm::Value *> &values);
+        static llvm::Value* printf(const std::vector<llvm::Value *> &values);
+        static llvm::Value* println(const std::vector<llvm::Value *> &values);
     };
 }

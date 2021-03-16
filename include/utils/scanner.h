@@ -1,11 +1,10 @@
 #pragma once
 #include "compilermanager.h"
-#include <unistd.h>
-#include <thread>
+#include <vector>
 namespace turbolang {
-    class sleeper {
+    class scanner {
     public:
         static void prepare();
-        static llvm::Value* sleep(llvm::Value *arg);
+        static llvm::Value* scanf(const std::vector<llvm::Value *> &values);
     };
 }

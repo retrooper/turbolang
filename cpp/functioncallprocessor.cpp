@@ -14,13 +14,11 @@ namespace turbolang {
 
     llvm::Value* printfcallprocessor::process(turbolang::functiondefinition &currentFunction,
                                       std::vector<llvm::Value *> &arguments) {
-        turbolang::printer::printf(arguments);
-        return nullptr;
+        return turbolang::printer::printf(arguments);
     }
 
     llvm::Value *printlncallprocessor::process(functiondefinition &currentFunction, std::vector<llvm::Value *> &arguments) {
-        turbolang::printer::println(arguments);
-        return nullptr;
+        return turbolang::printer::println(arguments);
     }
 
     llvm::Value* exitcallprocessor::process(functiondefinition &currentFunction, std::vector<llvm::Value*>& arguments) {
@@ -30,6 +28,12 @@ namespace turbolang {
 
     llvm::Value *
     sleepercallprocessor::process(functiondefinition &currentFunction, std::vector<llvm::Value *> &arguments) {
-        turbolang::sleeper::sleep(arguments[0]);
+        return turbolang::sleeper::sleep(arguments[0]);
+    }
+
+    llvm::Value *
+    scanfcallprocessor::process(functiondefinition &currentFunction, std::vector<llvm::Value *> &arguments) {
+        llvm::Value* returnValue = turbolang::scanner::scanf(arguments);
+        return returnValue;
     }
 }

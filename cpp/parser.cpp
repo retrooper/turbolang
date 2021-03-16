@@ -5,6 +5,7 @@ namespace turbolang {
     parser::parser() {
         turbolang::compilermanager::functionCallProcessorMap["printf"] = new turbolang::printfcallprocessor();
         turbolang::compilermanager::functionCallProcessorMap["println"] = new turbolang::printlncallprocessor();
+        turbolang::compilermanager::functionCallProcessorMap["scanf"] = new turbolang::scanfcallprocessor();
         turbolang::compilermanager::functionCallProcessorMap["exit"] = new turbolang::exitcallprocessor();
         turbolang::compilermanager::functionCallProcessorMap["sleep"] = new turbolang::sleepercallprocessor();
     }
@@ -296,16 +297,27 @@ namespace turbolang {
                         bool checkedForSemiColon = false;
                         switch (variableValueToken.value().type) {
                             case TOKEN_TYPE_IDENTIFIER:
-                                allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(
-                                        variableValueToken.value().text);
+                                if (variableValueToken.value().text.find('&') == 0) {
+                                    //Starts with '&', its a pointer
+                                    allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(
+                                            variableValueToken.value().text.substr(1));
+                                } else {
+                                    allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(
+                                            variableValueToken.value().text);
+                                }
                                 if (expect_token_type(TOKEN_TYPE_OPERATOR, "(").has_value()) {
                                     //ITS A FUNCTION CALL!
                                     currentToken--;
                                     allocatedValue = parseFunctionCall(statement, variableValueToken.value().text);
                                     checkedForSemiColon = true;
                                 } else {
-                                    allocatedValue = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
-                                            variableValueToken.value().text);
+                                    if (variableValueToken.value().text.find('&') == 0) {
+                                        //Starts with '&', its a pointer
+                                        allocatedValue = allocaInst;
+                                    } else {
+                                        allocatedValue = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
+                                                variableValueToken.value().text);
+                                    }
                                 }
                                 type = allocatedValue->getType();
                                 arraySize = llvm::ConstantInt::get(type, llvm::APInt(32, 9)); //civ?????????h elp
@@ -386,12 +398,12 @@ namespace turbolang {
             llvm::Type *type = nullptr;
             llvm::Constant *arraySize = nullptr;
             llvm::Value *val = nullptr;
+            llvm::AllocaInst *allocaInst;
             switch (variableValueToken.value().type) {
                 case TOKEN_TYPE_IDENTIFIER:
-                    type = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
-                            variableValueToken.value().text)->getType();
-                    val = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
+                    allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(
                             variableValueToken.value().text);
+                    val = compilermanager::llvmIRBuilder.CreateLoad(allocaInst, llvm::Twine( variableValueToken.value().text));
                     break;
                 case TOKEN_TYPE_INTEGER_LITERAL:
                     type = llvm::Type::getInt32Ty(turbolang::compilermanager::llvmContext);
@@ -412,9 +424,8 @@ namespace turbolang {
                 default:
                     throw std::runtime_error("Unsupported variable value token!");
             }
-            auto allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(
-                    variableNameToken.value().text);
             if (val == nullptr) {
+                allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(variableNameToken.value().text);
                 auto storeInst = turbolang::compilermanager::llvmIRBuilder.CreateStore(
                         arraySize, allocaInst,
                         false);
@@ -481,8 +492,17 @@ namespace turbolang {
                 llvm::Value *llvmFunctionArgument = nullptr;
                 switch (argument.type) {
                     case TOKEN_TYPE_IDENTIFIER:
-                        llvmFunctionArgument = turbolang::compilermanager::functions[currentFuncName].get_variable_by_name(
-                                argument.text);//TODO
+                        if (argument.text.find('&') == 0) {
+                            //Its a pointer
+                            llvm::AllocaInst *allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(
+                                    argument.text.substr(1));
+                            llvmFunctionArgument = allocaInst;
+                        } else {
+                            llvm::AllocaInst *allocaInst = turbolang::compilermanager::functions[currentFuncName].get_alloca_instance(
+                                    argument.text);
+
+                            llvmFunctionArgument =  compilermanager::llvmIRBuilder.CreateLoad(allocaInst, llvm::Twine(argument.text));
+                        }
                         break;
                     case TOKEN_TYPE_INTEGER_LITERAL:
                         //TODO create byte, short, long
@@ -510,7 +530,8 @@ namespace turbolang {
                 return turbolang::functioncallprocessor::external_func_process(targetFunction,
                                                                                llvmFunctionArguments);
             } else {
-                return funcCallProcessor->process(targetFunction, llvmFunctionArguments);
+                llvm::Value *returnValue = funcCallProcessor->process(targetFunction, llvmFunctionArguments);
+                return returnValue;
             }
         }
         return nullptr;
@@ -544,8 +565,7 @@ namespace turbolang {
 
 // Any new code will be inserted in AfterBB.
                         compilermanager::llvmIRBuilder.SetInsertPoint(loopAfterBasicBlock);
-                    }
-                    else {
+                    } else {
                         auto nextToken = expect_token_type(TOKEN_TYPE_OPERATOR, "{");
                         if (nextToken.has_value()) {
                             for (nextToken = expect_token();
@@ -623,4 +643,5 @@ namespace turbolang {
             throw std::runtime_error("Expected semicolon!");
         }
     }
+
 }

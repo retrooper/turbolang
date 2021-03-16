@@ -15,10 +15,10 @@ void turbolang::printer::prepare(){
                            turbolang::compilermanager::llvmModule.get());
 }
 
-void turbolang::printer::printf(const std::vector<llvm::Value*>& values) {
-    turbolang::compilermanager::llvmIRBuilder.CreateCall(turbolang::compilermanager::llvmModule->getFunction("printf"), values);
+llvm::Value* turbolang::printer::printf(const std::vector<llvm::Value*>& values) {
+    return turbolang::compilermanager::llvmIRBuilder.CreateCall(turbolang::compilermanager::llvmModule->getFunction("printf"), values);
 }
 
-void turbolang::printer::println(const std::vector<llvm::Value *> &values) {
-    turbolang::compilermanager::llvmIRBuilder.CreateCall(turbolang::compilermanager::llvmModule->getFunction("puts"), values);
+llvm::Value* turbolang::printer::println(const std::vector<llvm::Value *> &values) {
+    return turbolang::compilermanager::llvmIRBuilder.CreateCall(turbolang::compilermanager::llvmModule->getFunction("puts"), values);
 }

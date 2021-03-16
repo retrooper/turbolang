@@ -4,14 +4,13 @@
 #include "parser/parser.h"
 #include <iostream>
 #include <fstream>
-#include <thread>
 
 void run() {
     std::string code;
     {
-        std::ifstream sourceFile("src/main.tl");
+        std::ifstream sourceFile("build/src/main.tl");
         if (!sourceFile) {
-            auto path = std::filesystem::current_path().string() + "/src";
+            auto path = std::filesystem::current_path().string() + "/build/src";
             std::cerr << "Source file not found in the " << path << " directory!" << std::endl;
             exit(-1);
         }
@@ -44,7 +43,7 @@ void run() {
 
     long end = turbolang::get_current_nano();
     for (const auto &t : tokens) {
-        //t.debug();
+        t.debug();
     }
     std::cout << "TurboLang took " << (end - start)
                  << " nanoseconds to tokenize the source code!" << std::endl;
@@ -65,6 +64,10 @@ void run() {
     end = turbolang::get_current_nano();
     std::cout << "Clang took " << (end - start)
               << " nanoseconds to compile the bytecode(convert into machine code)." << std::endl;
+    start = turbolang::get_current_nano();
+    turbolang::compilermanager::generate_executables();
+    end = turbolang::get_current_nano();
+    std::cout << "Clang took " << (end - start) << " nanoseconds to build the executables for all platforms." << std::endl;
     std::cout << "Executing in 5 seconds..." << std::endl;
     auto sleepTime = std::chrono::seconds(5);
     std::this_thread::sleep_for(sleepTime);
