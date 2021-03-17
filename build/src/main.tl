@@ -1,9 +1,8 @@
-int main() {
-    #added while loops
-    println("What is your age?");
-    int value = 0;
-    scanf("%i", &value);
-    println("We got: ");
-    printf("%i", value);
+void eat() {
+    println("ok");
+}
+
+i32 main() {
+    eat();
     return 0;
 }

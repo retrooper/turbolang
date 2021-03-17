@@ -1,16 +1,17 @@
 #pragma once
-#include "type.h"
+
+#include "variable/Variable.h"
 #include <string>
 #include <vector>
+
 namespace turbolang {
     enum statementtype {
         VARIABLE_DECLARATION, VARIABLE_MODIFICATION, FUNCTION_CALL
     };
 
-    struct statement {
+    struct Statement {
         std::string name;
-        variabletype vartype;
         statementtype type;
-        std::vector<statement> parameters;
+        std::vector<Statement> parameters;
     };
 }
