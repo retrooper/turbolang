@@ -1,7 +1,7 @@
-#include "utils/timeutil.h"
+#include "utils/TimeUtil.h"
 #include "utils/Compiler.h"
 #include "utils/llvm/LLVMManager.h"
-#include "tokenizer/tokenizer.h"
+#include "tokenizer/Tokenizer.h"
 #include "parser/Parser.h"
 #include "utils/SourceCodeReader.h"
 #include <iostream>
@@ -12,34 +12,34 @@ void run() {
     //The filtered source code will be inserted into the variable we passed in as a pointer.
     SourceCodeReader::readAndFilterCode(sourceFile, &code);
     LLVMManager::init();
-    class turbolang::tokenizer tokenizer;
-    long start = turbolang::get_current_nano();
-    std::vector<turbolang::token> tokens = tokenizer.tokenize(code);
-    long end = turbolang::get_current_nano();
+    class Tokenizer tokenizer;
+    long start = turbolang::getCurrentNanoTime();
+    std::vector<Token> tokens = tokenizer.tokenize(code);
+    long end = turbolang::getCurrentNanoTime();
     for (const auto &t : tokens) {
         t.debug();
     }
     std::cout << "TurboLang took " << (end - start)
               << " nanoseconds to tokenize the source code!" << std::endl;
-    start = turbolang::get_current_nano();
+    start = turbolang::getCurrentNanoTime();
     class turbolang::Parser parser;
     parser.parse(tokens);
-    end = get_current_nano();
+    end = getCurrentNanoTime();
     std::cout << "TurboLang took " << (end - start)
               << " nanoseconds to parse the tokens!" << std::endl;
-    start = get_current_nano();
+    start = getCurrentNanoTime();
     Compiler::generate_byte_code();
-    end = get_current_nano();
+    end = getCurrentNanoTime();
     std::cout << "TurboLang took " << (end - start) << " nanoseconds to generate bytecode!"
               << std::endl;
-    start = get_current_nano();
+    start = getCurrentNanoTime();
     Compiler::generate_binary();
-    end = get_current_nano();
+    end = getCurrentNanoTime();
     std::cout << "Clang took " << (end - start)
               << " nanoseconds to compile the bytecode(convert into machine code)." << std::endl;
-    start = get_current_nano();
+    start = getCurrentNanoTime();
     Compiler::generate_executables();
-    end = get_current_nano();
+    end = getCurrentNanoTime();
     std::cout << "Clang took " << (end - start) << " nanoseconds to build the executables for all platforms."
               << std::endl;
     LLVMManager::destroy();

@@ -27,9 +27,8 @@ namespace turbolang {
         entry = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "entry", llvmFunction);
         for (int i = 0; i < llvmFunction->arg_size(); i++) {
             const FunctionArgument *argument = &arguments[i];
-            llvm::AllocaInst *allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(
-                    Type::getLLVMTypeByVariableType(argument->type), nullptr, argument->name);
-            allocaMap[name] = allocaInst;
+            llvm::AllocaInst *allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(Type::getLLVMTypeByVariableType(argument->type), nullptr, argument->name);
+            setAllocaInst(name, allocaInst);
         }
     }
 

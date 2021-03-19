@@ -1,12 +1,14 @@
 #pragma once
 
-#include "tokenizer/tokenizer.h"
+#include "tokenizer/Tokenizer.h"
 #include "function/FunctionCallProcessor.h"
 #include "function/Function.h"
 #include "utils/Compiler.h"
 #include "utils/Type.h"
 #include "data/Statement.h"
 #include <vector>
+#include <list>
+#include <stack>
 
 namespace turbolang {
     class Parser {
@@ -15,23 +17,23 @@ namespace turbolang {
     public:
         Parser();
 
-        void parse(std::vector<token> &tokens);
+        void parse(std::vector<Token> &tokens);
 
     private:
 
-        std::vector<token>::iterator currentToken;
-        std::vector<token>::iterator endToken;
+        std::vector<Token>::iterator currentToken;
+        std::vector<Token>::iterator endToken;
         std::string currentFuncName;
 
         bool expect_function_definition();
 
         std::optional<std::vector<Statement>> parse_function_body();
 
-        std::optional<token> expect_token_type(const tokentype &type, const std::string &name);
+        std::optional<Token> expect_token_type(const TokenType &type, const std::string &name);
 
-        std::optional<token> expect_token_type(const tokentype &type);
+        std::optional<Token> expect_token_type(const TokenType &type);
 
-        std::optional<token> expect_token();
+        std::optional<Token> expect_token();
 
         std::optional<VariableType> expect_token_variable_type();
 
@@ -41,14 +43,18 @@ namespace turbolang {
 
         std::optional<Statement> parseStatement();
 
-        void parseVariableDeclaration(Statement &statement, const token &typeToken);
+        void parseVariableDeclaration(Statement &statement, const Token &typeToken);
 
-        void parseVariableModification(Statement &statement, const std::optional<token> &variableName);
+        void parseVariableModification(Statement &statement, const std::optional<Token> &variableName);
 
         llvm::Value *parseFunctionCall(Statement &statement, const std::string &functionName);
 
         void parseWhileLoop(Statement &statement);
 
         void parseReturn(Statement &statement);
+
+        bool isMathematicalOperator(const std::string& op);
+
+        llvm::Value* parseMathematicalExpression();
     };
 }

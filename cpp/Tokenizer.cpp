@@ -1,9 +1,9 @@
-#include "tokenizer/tokenizer.h"
+#include "tokenizer/Tokenizer.h"
 
 namespace turbolang {
-    std::vector<token> tokenizer::tokenize(const std::string &code) {
-        std::vector<token> tokens;
-        struct token currentToken;
+    std::vector<Token> Tokenizer::tokenize(const std::string &code) {
+        std::vector<Token> tokens;
+        struct Token currentToken;
         currentToken.lineNumber = 1;
         int commentLine = -1;
         for (char currChar : code) {
@@ -73,10 +73,12 @@ namespace turbolang {
                 case '(':
                 case ')':
                 case '=':
-                case '-':
-                case ':':
                 case ',':
                 case ';':
+                case '*':
+                case '/':
+                case '+':
+                case '-':
                     if (currentToken.lineNumber != commentLine) {
                         if (currentToken.type != TOKEN_TYPE_STRING_LITERAL) {
                             endToken(&currentToken, &tokens);
@@ -144,7 +146,7 @@ namespace turbolang {
         return tokens;
     }
 
-    void tokenizer::endToken(token *token, std::vector<turbolang::token> *tokens) {
+    void Tokenizer::endToken(Token *token, std::vector<turbolang::Token> *tokens) {
       if (token->type != TOKEN_TYPE_WHITESPACE) {
             tokens->push_back(*token);
         } else if (token->type == TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL) {
@@ -159,7 +161,7 @@ namespace turbolang {
         token->text.erase();
     }
 
-    void token::debug() const {
+    void Token::debug() const {
         std::cout << "DEBUG TYPE: " << TOKEN_TYPE_STRINGS[type] << ", Text: " << text << ", at line number: "
                   << lineNumber << std::endl;
     }

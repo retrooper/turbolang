@@ -6,7 +6,7 @@
 #include <iostream>
 
 namespace turbolang {
-    enum tokentype {
+    enum TokenType {
         TOKEN_TYPE_WHITESPACE,
         TOKEN_TYPE_IDENTIFIER,
         TOKEN_TYPE_INTEGER_LITERAL,
@@ -29,8 +29,8 @@ namespace turbolang {
             "TOKEN_TYPE_COMMENT"
     };
 
-    struct token {
-        tokentype type{TOKEN_TYPE_WHITESPACE};
+    struct Token {
+        TokenType type{TOKEN_TYPE_WHITESPACE};
         std::string text;
         size_t lineNumber{0};
 
@@ -38,13 +38,13 @@ namespace turbolang {
     };
 
 
-    class tokenizer {
+    class Tokenizer {
     public:
-        tokenizer() = default;
+        Tokenizer() = default;
 
-        std::vector<token> tokenize(const std::string &code);
+        std::vector<Token> tokenize(const std::string &code);
 
     private:
-        void endToken(token *token, std::vector<turbolang::token> *tokens);
+        void endToken(Token *token, std::vector<turbolang::Token> *tokens);
     };
 }

@@ -1,8 +1,6 @@
-void eat() {
-    println("ok");
-}
-
 i32 main() {
-    eat();
+    i8 i = 127;
+    scanf("%c", &i);
+    printf("%s%c", "We received: ", i);
     return 0;
 }
