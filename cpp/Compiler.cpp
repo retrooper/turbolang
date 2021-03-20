@@ -13,7 +13,6 @@ void turbolang::Compiler::generate_byte_code() {
         if (outputStream != &llvm::outs()) {
             delete outputStream;
         }
-        FunctionCallProcessor::unload();
 }
 
 void turbolang::Compiler::generate_binary() {

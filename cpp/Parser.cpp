@@ -1,14 +1,25 @@
 #include "parser/Parser.h"
 
 namespace turbolang {
+    std::vector<Token>::iterator Parser::currentToken;
+    std::vector<Token>::iterator Parser::endToken;
+    std::string Parser::currentFuncName;
 
-    Parser::Parser() {
+
+    void Parser::load() {
         FunctionCallProcessor::load();
+    }
+
+    void Parser::unload() {
+        FunctionCallProcessor::unload();
     }
 
     void Parser::parse(std::vector<Token> &tokens) {
         endToken = tokens.end();
         currentToken = tokens.begin();
+        if (currentToken->type == TOKEN_TYPE_IDENTIFIER && currentToken->text == "import") {
+            parseImportStatement();
+        }
         //MAIN FUNCTION
         while (currentToken != endToken) {
             if (expect_function_definition()) {
@@ -17,6 +28,54 @@ namespace turbolang {
                 std::cerr << "Unknown identifier " << currentToken->text << std::endl;
                 currentToken++;
             }
+        }
+    }
+
+    void Parser::parseImportStatement() {
+        std::vector<std::string> importedModules;
+        bool importPending = false;
+        while (true) {
+            auto nextToken = expect_token_type(TOKEN_TYPE_IDENTIFIER, "import");
+            if (nextToken.has_value()) {
+                importPending = true;
+            } else {
+                if (importPending) {
+                    nextToken = expect_token_type(TOKEN_TYPE_STRING_LITERAL);
+                    if (nextToken.has_value()) {
+                        importedModules.push_back(nextToken.value().text);
+                        importPending = false;
+                    } else {
+                        throw std::runtime_error("Invalid module format!");
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        for (std::string &module : importedModules) {
+            if (module.substr(module.length() - 2) != "tl") {
+                module = module + ".tl";
+            }
+            auto basePath = std::filesystem::current_path();
+            auto modulesPath = basePath.string() + "/build/modules";
+            std::filesystem::current_path(modulesPath);
+            std::string code;
+            std::ifstream sourceFile(module);
+            if (!SourceCodeReader::readAndFilterCode(sourceFile, &code)) {
+                throw std::runtime_error("Failed to read module: " + modulesPath + "/" + module);
+            }
+            std::filesystem::current_path(basePath);
+            std::cout << "code: " << code << std::endl;
+            std::vector<Token> tokens = Tokenizer::tokenize(code);
+            auto prevCurrToken = currentToken;
+            auto prevEndToken = endToken;
+            auto prevCurrFuncName = currentFuncName;
+            Parser::parse(tokens);
+            currentToken = prevCurrToken;
+            endToken = prevEndToken;
+            currentFuncName = prevCurrFuncName;
+
         }
     }
 
@@ -120,8 +179,6 @@ namespace turbolang {
                         }
                     }
                     function.create(functionType.value());
-
-                    LLVMManager::llvmBytecodeBuilder->SetInsertPoint(function.entry);
 
                     Function::functionMap[function.name] = function;
                     currentFuncName = function.name;
@@ -253,7 +310,8 @@ namespace turbolang {
                             break;
                         case TOKEN_TYPE_INTEGER_LITERAL:
                             allocatedValue = llvm::ConstantInt::get(type,
-                                                                    llvm::APInt(Type::getVariableIntBitCount(typeToken.text), std::stoi(
+                                                                    llvm::APInt(Type::getVariableIntBitCount(
+                                                                            typeToken.text), std::stoi(
                                                                             variableValueToken.value().text)));
                             break;
                         case TOKEN_TYPE_DOUBLE_LITERAL:
@@ -605,5 +663,4 @@ namespace turbolang {
     bool Parser::isMathematicalOperator(const std::string &op) {
         return op == "+" || op == "-" || op == "*" || op == "/";
     }
-
 }

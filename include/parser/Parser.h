@@ -6,6 +6,7 @@
 #include "utils/Compiler.h"
 #include "utils/Type.h"
 #include "data/Statement.h"
+#include "utils/SourceCodeReader.h"
 #include <vector>
 #include <list>
 #include <stack>
@@ -17,44 +18,46 @@ namespace turbolang {
     public:
         Parser();
 
-        void parse(std::vector<Token> &tokens);
-
+        static void parse(std::vector<Token> &tokens);
+        static void load();
+        static void unload();
     private:
+        static std::vector<Token>::iterator currentToken;
+        static std::vector<Token>::iterator endToken;
+        static std::string currentFuncName;
 
-        std::vector<Token>::iterator currentToken;
-        std::vector<Token>::iterator endToken;
-        std::string currentFuncName;
+        static bool expect_function_definition();
 
-        bool expect_function_definition();
+        static std::optional<std::vector<Statement>> parse_function_body();
 
-        std::optional<std::vector<Statement>> parse_function_body();
+        static std::optional<Token> expect_token_type(const TokenType &type, const std::string &name);
 
-        std::optional<Token> expect_token_type(const TokenType &type, const std::string &name);
+        static std::optional<Token> expect_token_type(const TokenType &type);
 
-        std::optional<Token> expect_token_type(const TokenType &type);
+        static std::optional<Token> expect_token();
 
-        std::optional<Token> expect_token();
+        static std::optional<VariableType> expect_token_variable_type();
 
-        std::optional<VariableType> expect_token_variable_type();
+        static std::optional<FunctionType> expect_token_function_type();
 
-        std::optional<FunctionType> expect_token_function_type();
+        static std::optional<bool> expect_boolean_value();
 
-        std::optional<bool> expect_boolean_value();
+        static std::optional<Statement> parseStatement();
 
-        std::optional<Statement> parseStatement();
+        static void parseImportStatement();
 
-        void parseVariableDeclaration(Statement &statement, const Token &typeToken);
+        static void parseVariableDeclaration(Statement &statement, const Token &typeToken);
 
-        void parseVariableModification(Statement &statement, const std::optional<Token> &variableName);
+        static void parseVariableModification(Statement &statement, const std::optional<Token> &variableName);
 
-        llvm::Value *parseFunctionCall(Statement &statement, const std::string &functionName);
+        static llvm::Value *parseFunctionCall(Statement &statement, const std::string &functionName);
 
-        void parseWhileLoop(Statement &statement);
+        static void parseWhileLoop(Statement &statement);
 
-        void parseReturn(Statement &statement);
+        static void parseReturn(Statement &statement);
 
-        bool isMathematicalOperator(const std::string& op);
+        static bool isMathematicalOperator(const std::string& op);
 
-        llvm::Value* parseMathematicalExpression();
+        static llvm::Value* parseMathematicalExpression();
     };
 }

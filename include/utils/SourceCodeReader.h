@@ -6,7 +6,7 @@
 
 namespace turbolang {
     enum SourceCodeReaderResult {
-        SOURCE_READER_RESULT_SUCCESS, SOURCE_READER_RESULT_FAILURE
+        SOURCE_READER_RESULT_FAILURE = 0, SOURCE_READER_RESULT_SUCCESS = 1
     };
 
     struct SourceCodeReader {

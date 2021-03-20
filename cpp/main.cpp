@@ -10,11 +10,12 @@ void run() {
     std::string code;
     std::ifstream sourceFile("build/src/main.tl");
     //The filtered source code will be inserted into the variable we passed in as a pointer.
-    SourceCodeReader::readAndFilterCode(sourceFile, &code);
+    if (SourceCodeReader::readAndFilterCode(sourceFile, &code) == SOURCE_READER_RESULT_FAILURE) {
+        throw std::runtime_error("Failed to read and filter source code!");
+    }
     LLVMManager::init();
-    class Tokenizer tokenizer;
     long start = turbolang::getCurrentNanoTime();
-    std::vector<Token> tokens = tokenizer.tokenize(code);
+    std::vector<Token> tokens = Tokenizer::tokenize(code);
     long end = turbolang::getCurrentNanoTime();
     for (const auto &t : tokens) {
         t.debug();
@@ -22,13 +23,15 @@ void run() {
     std::cout << "TurboLang took " << (end - start)
               << " nanoseconds to tokenize the source code!" << std::endl;
     start = turbolang::getCurrentNanoTime();
-    class turbolang::Parser parser;
-    parser.parse(tokens);
+    Parser::load();
+    Parser::parse(tokens);
     end = getCurrentNanoTime();
     std::cout << "TurboLang took " << (end - start)
               << " nanoseconds to parse the tokens!" << std::endl;
     start = getCurrentNanoTime();
     Compiler::generate_byte_code();
+    Parser::unload();
+    LLVMManager::destroy();
     end = getCurrentNanoTime();
     std::cout << "TurboLang took " << (end - start) << " nanoseconds to generate bytecode!"
               << std::endl;
@@ -42,7 +45,6 @@ void run() {
     end = getCurrentNanoTime();
     std::cout << "Clang took " << (end - start) << " nanoseconds to build the executables for all platforms."
               << std::endl;
-    LLVMManager::destroy();
     std::cout << "Executing in 5 seconds..." << std::endl;
     auto sleepTime = std::chrono::seconds(5);
     std::this_thread::sleep_for(sleepTime);

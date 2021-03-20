@@ -1,6 +1,8 @@
+import "time"
 i32 main() {
-    i8 i = 127;
-    scanf("%c", &i);
-    printf("%s%c", "We received: ", i);
+    while (true) {
+        sleep(1000000);
+        println("Yay!");
+    }
     return 0;
 }

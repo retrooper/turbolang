@@ -42,9 +42,9 @@ namespace turbolang {
     public:
         Tokenizer() = default;
 
-        std::vector<Token> tokenize(const std::string &code);
+        static std::vector<Token> tokenize(const std::string &code);
 
     private:
-        void endToken(Token *token, std::vector<turbolang::Token> *tokens);
+        static void endToken(Token *token, std::vector<turbolang::Token> *tokens);
     };
 }
