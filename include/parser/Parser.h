@@ -19,8 +19,6 @@ namespace turbolang {
         Parser();
 
         static void parse(std::vector<Token> &tokens);
-        static void load();
-        static void unload();
     private:
         static std::vector<Token>::iterator currentToken;
         static std::vector<Token>::iterator endToken;
@@ -43,6 +41,8 @@ namespace turbolang {
         static std::optional<bool> expect_boolean_value();
 
         static std::optional<Statement> parseStatement();
+
+        static void parseFunctionDeclareStatement();
 
         static void parseImportStatement();
 

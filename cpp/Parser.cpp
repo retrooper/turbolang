@@ -5,28 +5,103 @@ namespace turbolang {
     std::vector<Token>::iterator Parser::endToken;
     std::string Parser::currentFuncName;
 
-
-    void Parser::load() {
-        FunctionCallProcessor::load();
-    }
-
-    void Parser::unload() {
-        FunctionCallProcessor::unload();
-    }
-
     void Parser::parse(std::vector<Token> &tokens) {
         endToken = tokens.end();
         currentToken = tokens.begin();
         if (currentToken->type == TOKEN_TYPE_IDENTIFIER && currentToken->text == "import") {
             parseImportStatement();
         }
+
+
         //MAIN FUNCTION
         while (currentToken != endToken) {
+            if (currentToken->type == TOKEN_TYPE_IDENTIFIER && currentToken->text == "declare") {
+                currentToken++;
+                parseFunctionDeclareStatement();
+                continue;
+            }
             if (expect_function_definition()) {
 
             } else {
                 std::cerr << "Unknown identifier " << currentToken->text << std::endl;
                 currentToken++;
+            }
+        }
+    }
+
+    void Parser::parseFunctionDeclareStatement() {
+        auto nextToken = expect_token_type(TOKEN_TYPE_IDENTIFIER);
+        if (nextToken.has_value()) {
+            auto functionTypeOptional = Type::getFunctionType(nextToken.value().text);
+            if (functionTypeOptional.has_value()) {
+                auto functionType = static_cast<FunctionType>(functionTypeOptional.value());
+                nextToken = expect_token_type(TOKEN_TYPE_IDENTIFIER);
+                if (nextToken.has_value()) {
+                    std::string functionName = nextToken.value().text;
+                    auto openingParenthesis = expect_token_type(TOKEN_TYPE_OPERATOR);
+                    if (openingParenthesis.has_value()) {
+                        bool expectingComma = false;
+                        std::vector<llvm::Type *> functionArgumentTypes;
+                        bool argumentSizeConstant = true;
+                        while (true) {
+                            if (expectingComma) {
+                                nextToken = expect_token();
+                                if (nextToken.has_value()) {
+                                    if (nextToken.value().type == TOKEN_TYPE_OPERATOR) {
+                                        if (nextToken.value().text == ")") {
+                                            break;
+                                        } else if (nextToken.value().text == ",") {
+                                            expectingComma = false;
+                                            continue;
+                                        }
+                                    }
+                                }
+                                throw std::runtime_error(
+                                        "Please separate function declaration arguments with commas! Do NOT specify a name for the types in the arguments.");
+                            } else {
+                                nextToken = expect_token_type(TOKEN_TYPE_IDENTIFIER);
+                                if (nextToken.has_value()) {
+                                    functionTypeOptional = Type::getFunctionType(nextToken.value().text);
+                                    if (functionTypeOptional.has_value()) {
+                                        auto functionArgumentType = static_cast<FunctionType>(functionTypeOptional.value());
+                                        functionArgumentTypes.push_back(Type::getLLVMTypeByFunctionType(functionArgumentType));
+                                        expectingComma = true;
+                                        continue;
+                                    }
+                                    else {
+
+                                    }
+                                }
+                                else {
+                                    argumentSizeConstant = false;
+                                    for (int i = 0; i < 3; i++) {
+                                        nextToken = expect_token();
+                                        if (!nextToken.has_value() || nextToken.value().text != ".") {
+                                            argumentSizeConstant = true;
+                                            //Invalid type?
+                                            break;
+                                        }
+                                    }
+                                    if (!argumentSizeConstant) {
+                                        expectingComma = true;
+                                        continue;
+                                    }
+                                }
+                                throw std::runtime_error("Invalid function argument type!");
+                            }
+                        }
+
+                        nextToken = expect_token_type(TOKEN_TYPE_OPERATOR, ";");
+                        if (nextToken.has_value()) {
+                            FunctionInternal::defineFunction(functionName,
+                                                             Type::getLLVMTypeByFunctionType(functionType),
+                                                             functionArgumentTypes, argumentSizeConstant);
+                        }
+                        else {
+                            throw std::runtime_error("Expected semicolon!");
+                        }
+                    }
+                }
             }
         }
     }

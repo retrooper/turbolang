@@ -1,0 +1,1 @@
+declare i32 abs(i32);

@@ -23,19 +23,14 @@ namespace turbolang {
             }
             llvmFunctionType = llvm::FunctionType::get(Type::getLLVMTypeByFunctionType(returnValue), params, false);
         }
-        if (llvmFunctionType == nullptr) {
-            llvm::outs() << "bruh" << "\n";
-        }
         llvmFunction = llvm::Function::Create(llvmFunctionType, llvm::Function::ExternalLinkage, name, LLVMManager::llvmModule);
-       if (llvmFunction == nullptr) {
-           llvm::outs() << "bruh2" << "\n";
-       }
         entry = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "entry", llvmFunction);
         LLVMManager::llvmBytecodeBuilder->SetInsertPoint(entry);
         for (int i = 0; i < llvmFunction->arg_size(); i++) {
             const FunctionArgument *argument = &arguments[i];
             llvm::AllocaInst *allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(Type::getLLVMTypeByVariableType(argument->type), nullptr,
                                                                                           llvm::Twine(argument->name));
+            llvm::StoreInst* storeInst = LLVMManager::llvmBytecodeBuilder->CreateStore(llvmFunction->getArg(i), allocaInst, false);
             setAllocaInst(argument->name, allocaInst);
         }
     }

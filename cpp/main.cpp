@@ -23,14 +23,12 @@ void run() {
     std::cout << "TurboLang took " << (end - start)
               << " nanoseconds to tokenize the source code!" << std::endl;
     start = turbolang::getCurrentNanoTime();
-    Parser::load();
     Parser::parse(tokens);
     end = getCurrentNanoTime();
     std::cout << "TurboLang took " << (end - start)
               << " nanoseconds to parse the tokens!" << std::endl;
     start = getCurrentNanoTime();
     Compiler::generate_byte_code();
-    Parser::unload();
     LLVMManager::destroy();
     end = getCurrentNanoTime();
     std::cout << "TurboLang took " << (end - start) << " nanoseconds to generate bytecode!"
