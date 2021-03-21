@@ -20,7 +20,7 @@ namespace turbolang {
                     }
                 }
                 if (!commentFound) {
-                    *filteredCode += line;
+                    *filteredCode += line + "\n";
                 }
             }
             file.close();

@@ -8,6 +8,9 @@ namespace turbolang {
         for (char currChar : code) {
             if (currentToken.type == TOKEN_TYPE_STRING_ESCAPE_SEQUENCE) {
                 switch (currChar) {
+                    case 'n':
+                        currentToken.text.append(1, '\n');
+                        break;
                     case 't':
                         currentToken.text.append(1, '\t');
                         break;
@@ -93,6 +96,12 @@ namespace turbolang {
                     }
                     break;
 
+                case '\r':
+                case '\n':
+                    endToken(&currentToken, &tokens);
+                    currentToken.lineNumber++;
+                    break;
+
                 case ' ':
                 case '\t':
                     if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
@@ -100,11 +109,6 @@ namespace turbolang {
                     } else {
                         endToken(&currentToken, &tokens);
                     }
-                    break;
-                case '\r':
-                case '\n':
-                    endToken(&currentToken, &tokens);
-                    currentToken.lineNumber++;
                     break;
 
                 case '"':
@@ -118,7 +122,7 @@ namespace turbolang {
 
                 case '\\':
                     if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
-                        currentToken.type = TOKEN_TYPE_STRING_LITERAL;
+                        currentToken.type = TOKEN_TYPE_STRING_ESCAPE_SEQUENCE;
                     } else if (currentToken.type == TOKEN_TYPE_STRING_LITERAL) {
                         endToken(&currentToken, &tokens);
                         currentToken.type = TOKEN_TYPE_OPERATOR;
