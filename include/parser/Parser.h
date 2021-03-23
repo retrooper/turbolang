@@ -5,6 +5,7 @@
 #include "function/Function.h"
 #include "utils/Compiler.h"
 #include "utils/Type.h"
+#include "utils/DataType.h"
 #include "data/Statement.h"
 #include "utils/SourceCodeReader.h"
 #include <vector>
@@ -24,27 +25,29 @@ namespace turbolang {
         static std::vector<Token>::iterator endToken;
         static std::string currentFuncName;
 
-        static bool expect_function_definition();
+        static bool expectFunctionDefinition();
 
-        static std::optional<std::vector<Statement>> parse_function_body();
+        static std::optional<std::vector<Statement>> parseFunctionBody();
 
-        static std::optional<Token> expect_token_type(const TokenType &type, const std::string &name);
+        static std::optional<Token> expectTokenType(const TokenType &type, const std::string &name);
 
-        static std::optional<Token> expect_token_type(const TokenType &type);
+        static std::optional<Token> expectTokenType(const TokenType &type);
 
-        static std::optional<Token> expect_token();
+        static std::optional<Token> expectToken();
 
-        static std::optional<VariableType> expect_token_variable_type();
+        static std::optional<DataType> expectTokenVariableType();
 
-        static std::optional<FunctionType> expect_token_function_type();
+        static std::optional<DataType> expectTokenFunctionType();
 
-        static std::optional<bool> expect_boolean_value();
+        static std::optional<bool> expectBooleanValue();
 
         static std::optional<Statement> parseStatement();
 
         static void parseFunctionDeclareStatement();
 
         static void parseImportStatement();
+
+        static void parseClassDefinition();
 
         static void parseVariableDeclaration(Statement &statement, const Token &typeToken);
 

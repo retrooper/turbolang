@@ -2,42 +2,38 @@
 
 namespace turbolang {
     std::map<std::string, Function> Function::functionMap;
-    Function::Function(const std::string &name) {
-        this->name = name;
-        this->type = FUNCTION_TYPE_VOID;
-    }
 
-    Function::Function(const std::string &name, FunctionType type) {
+    Function::Function(const std::string &name, DataType type) {
         this->name = name;
         this->type = type;
     }
 
-    void Function::create(turbolang::FunctionType returnValue) {
+    void Function::create() {
         llvm::FunctionType *llvmFunctionType;
         if (arguments.empty()) {
-            llvmFunctionType = llvm::FunctionType::get(Type::getLLVMTypeByFunctionType(returnValue), false);
+            llvmFunctionType = llvm::FunctionType::get(Type::getLLVMType(type), false);
         } else {
             std::vector<llvm::Type *> params;
             for (const FunctionArgument &argument : arguments) {
-                params.push_back(Type::getLLVMTypeByVariableType(argument.type));
+                params.push_back(Type::getLLVMType(argument.type));
             }
-            llvmFunctionType = llvm::FunctionType::get(Type::getLLVMTypeByFunctionType(returnValue), params, false);
+            llvmFunctionType = llvm::FunctionType::get(Type::getLLVMType(type), params, false);
         }
         llvmFunction = llvm::Function::Create(llvmFunctionType, llvm::Function::ExternalLinkage, name, LLVMManager::llvmModule);
         entry = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "entry", llvmFunction);
         LLVMManager::llvmBytecodeBuilder->SetInsertPoint(entry);
         for (int i = 0; i < llvmFunction->arg_size(); i++) {
             const FunctionArgument *argument = &arguments[i];
-            llvm::AllocaInst *allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(Type::getLLVMTypeByVariableType(argument->type), nullptr,
+            llvm::AllocaInst *allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(Type::getLLVMType(argument->type), nullptr,
                                                                                           llvm::Twine(argument->name));
             llvm::StoreInst* storeInst = LLVMManager::llvmBytecodeBuilder->CreateStore(llvmFunction->getArg(i), allocaInst, false);
             setAllocaInst(argument->name, allocaInst);
         }
     }
 
-    void Function::create(FunctionType returnValue, std::vector<FunctionArgument> &inArguments) {
+    void Function::create(std::vector<FunctionArgument> &inArguments) {
         arguments = inArguments;
-        create(returnValue);
+        create();
     }
 
     //Pointer of a variable
@@ -57,7 +53,6 @@ namespace turbolang {
     }
 
     void Function::setValue(const std::string &name, llvm::Value *value) {
-        //Local variables(inside the current function)
         llvm::AllocaInst *allocaInst = getAllocaInst(name);
         llvm::StoreInst *storeInst = LLVMManager::llvmBytecodeBuilder->CreateStore(value, allocaInst, false);
     }

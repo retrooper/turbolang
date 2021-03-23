@@ -1,7 +1,7 @@
-declare i32 abs(i32);
-declare i32 rand();
+declare int32 abs(int32);
+declare int32 rand();
 
-i32 random() {
-    i32 randomNumber = rand();
+int32 random() {
+    int32 randomNumber = rand();
     return randomNumber;
 }

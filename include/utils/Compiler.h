@@ -25,4 +25,5 @@ namespace turbolang {
 
         static void execute_binary();
     };
+
 }

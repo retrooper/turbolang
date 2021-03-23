@@ -1,2 +1,2 @@
-declare i32 system(i8_ptr);
-declare void exit(i32);
+declare int32 system(int8_ptr);
+declare void exit(int32);
