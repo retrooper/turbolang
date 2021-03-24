@@ -374,9 +374,36 @@ namespace turbolang {
                 auto equalsOperator = expectTokenType(TOKEN_TYPE_OPERATOR, "=");
                 auto variableValueToken = equalsOperator.has_value() ? expectToken() : std::nullopt;
                 llvm::Type *type = Type::getLLVMType(varType.value());
+                bool signedType = typeToken.text.find('u') != 0;
                 bool checkedForSemiColon = false;
-                llvm::Value *allocatedValue;
-                if (variableValueToken.has_value()) {
+                llvm::Value *allocatedValue = nullptr;
+
+                currentToken--;
+                std::optional<Token> nextToken = expectToken();
+                while (true) {
+                    if (nextToken.has_value()) {
+                        if (isMathematicalOperator(nextToken.value().text)) {
+                            currentToken--;
+                            currentToken--;
+                            allocatedValue = parseMathematicalExpression();
+                            currentToken--;
+                        }
+                        else if (nextToken.value().text == "(") {
+                            //Skip number after '('
+                            currentToken++;
+                            nextToken = expectToken();
+                            currentToken--;
+                            continue;
+                        }
+                        else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
+                        nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL) {
+                            nextToken = expectToken();
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                if (allocatedValue == nullptr && variableValueToken.has_value()) {
                     switch (variableValueToken.value().type) {
                         case TOKEN_TYPE_IDENTIFIER:
                             if (expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value()) {
@@ -394,8 +421,8 @@ namespace turbolang {
                                     currentToken--;
                                     auto boolVal = expectBooleanValue();
                                     if (boolVal.has_value()) {
-                                        allocatedValue = llvm::ConstantInt::get(type, llvm::APInt(
-                                                Type::getIntBitCount(typeToken.text), boolVal.value() ? 1 : 0));
+                                        allocatedValue = llvm::ConstantInt::get(type, llvm::APInt(1, boolVal.value() ? 1
+                                                                                                                     : 0));
                                     } else {
                                         allocatedValue = Function::functionMap[currentFuncName].getValue(
                                                 variableValueToken.value().text);
@@ -404,10 +431,8 @@ namespace turbolang {
                             }
                             break;
                         case TOKEN_TYPE_INTEGER_LITERAL:
-                            allocatedValue = llvm::ConstantInt::get(type,
-                                                                    llvm::APInt(Type::getIntBitCount(typeToken.text),
-                                                                                std::stoi(
-                                                                                        variableValueToken.value().text)));
+                            allocatedValue = llvm::ConstantInt::get(type, std::stol(variableValueToken.value().text),
+                                                                    signedType);
                             break;
                         case TOKEN_TYPE_DOUBLE_LITERAL:
                             allocatedValue = llvm::ConstantFP::get(type,
@@ -422,7 +447,8 @@ namespace turbolang {
                     }
                 }
                 llvm::AllocaInst *allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type, nullptr,
-                                                                                              llvm::Twine(variableNameToken.value().text));
+                                                                                              llvm::Twine(
+                                                                                                      variableNameToken.value().text));
                 Function::functionMap[currentFuncName].setAllocaInst(
                         variableNameToken.value().text, allocaInst);
                 if (variableValueToken.has_value()) {
@@ -449,13 +475,30 @@ namespace turbolang {
             statement.type = VARIABLE_MODIFICATION;
             statement.name = variableNameToken.value().text;
             llvm::Value *val = nullptr;
-            std::optional<Token> nextToken = expectToken();
             currentToken--;
-            if (nextToken.has_value() && nextToken.value().type == TOKEN_TYPE_OPERATOR &&
-                isMathematicalOperator(nextToken.value().text)) {
-                currentToken--;
-                val = parseMathematicalExpression();
-                currentToken--;
+            std::optional<Token> nextToken = expectToken();
+            while (true) {
+                if (nextToken.has_value()) {
+                    if (isMathematicalOperator(nextToken.value().text)) {
+                        currentToken--;
+                        currentToken--;
+                        val = parseMathematicalExpression();
+                        currentToken--;
+                    }
+                    else if (nextToken.value().text == "(") {
+                        //Skip number after '('
+                        currentToken++;
+                        nextToken = expectToken();
+                        currentToken--;
+                        continue;
+                    }
+                    else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
+                             nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL) {
+                        nextToken = expectToken();
+                        continue;
+                    }
+                    break;
+                }
             }
             if (val == nullptr) {
                 switch (variableValueToken.value().type) {
@@ -474,7 +517,8 @@ namespace turbolang {
                                 currentToken--;
                                 auto boolVal = expectBooleanValue();
                                 if (boolVal.has_value()) {
-                                    val = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, boolVal.value() ? 1 : 0));
+                                    val = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL),
+                                                                 llvm::APInt(1, boolVal.value() ? 1 : 0));
                                 } else {
                                     val = Function::functionMap[currentFuncName].getValue(
                                             variableValueToken.value().text);
@@ -484,11 +528,13 @@ namespace turbolang {
                         break;
                     case TOKEN_TYPE_INTEGER_LITERAL:
                         //TODO get the initial variable type, and make to set isSigned to correct value and its type correctly
-                        val = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_INT), std::stoi(variableValueToken.value().text), true);
+                        val = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_INT),
+                                                     std::stoi(variableValueToken.value().text), true);
                         break;
                     case TOKEN_TYPE_DOUBLE_LITERAL:
                         //TODO get initial var type
-                        val = llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_DOUBLE), std::stod(variableValueToken.value().text));
+                        val = llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_DOUBLE),
+                                                    std::stod(variableValueToken.value().text));
                         break;
                     case TOKEN_TYPE_STRING_LITERAL:
                         val = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
@@ -497,8 +543,9 @@ namespace turbolang {
                     default:
                         throw std::runtime_error("Unsupported variable value Token!");
                 }
-                Function::functionMap[currentFuncName].setValue(variableNameToken.value().text, val);
+
             }
+            Function::functionMap[currentFuncName].setValue(variableNameToken.value().text, val);
             if (!checkedForSemiColon && !expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
             }
@@ -695,83 +742,7 @@ namespace turbolang {
                 break;
             }
         }
-
-        std::stack<llvm::Value *> numbers;
-        std::stack<std::string> ops;
-        std::map<std::string, int> op_precedence;
-        op_precedence["+"] = 10;
-        op_precedence["-"] = 10;
-        op_precedence["*"] = 20;
-        op_precedence["/"] = 20;
-        int i = 0;
-        for (const Token &exprToken : expressionTokens) {
-            if (exprToken.text == "(") {
-                ops.push(exprToken.text);
-            } else if (exprToken.text == ")") {
-                while (!ops.empty() && ops.top() != "(") {
-                    llvm::Value *val2 = numbers.top();
-                    numbers.pop();
-
-                    llvm::Value *val1 = numbers.top();
-                    numbers.pop();
-
-                    std::string op = ops.top();
-                    ops.pop();
-
-                    numbers.push(eval(val1, val2, op));
-                }
-
-                // pop opening brace.
-                ops.pop();
-            }
-
-                // if token is a number, add to stack
-            else if (!isMathematicalOperator(exprToken.text)) {
-                llvm::Value *numberValue = llvm::ConstantInt::get(
-                        llvm::IntegerType::getInt32Ty(*LLVMManager::llvmCtx),
-                        llvm::APInt(32, std::stoi(exprToken.text)));
-                //std::stod(exprToken.text);
-                numbers.push(numberValue);
-            }
-                // Current token is an operator.
-            else {
-
-                while (!ops.empty() && op_precedence[ops.top()]
-                                       >= op_precedence[exprToken.text]) {
-                    llvm::Value *val2 = numbers.top();
-                    numbers.pop();
-
-                    llvm::Value *val1 = numbers.top();
-                    numbers.pop();
-
-                    std::string op = ops.top();
-                    ops.pop();
-
-                    numbers.push(eval(val1, val2, op));
-                }
-
-                // Push current token to 'ops'.
-                ops.push(exprToken.text);
-            }
-            i++;
-        }
-
-        //Do remaining operations
-        while (!ops.empty()) {
-            llvm::Value *val2 = numbers.top();
-            numbers.pop();
-
-            llvm::Value *val1 = numbers.top();
-            numbers.pop();
-
-            std::string op = ops.top();
-            ops.pop();
-
-            numbers.push(eval(val1, val2, op));
-        }
-
-        // Top of 'numbers' contains result, return
-        return numbers.top();
+        return MathEvaluator::eval(expressionTokens);
     }
 
     bool Parser::isMathematicalOperator(const std::string &op) {

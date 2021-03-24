@@ -8,8 +8,8 @@
 #include "utils/DataType.h"
 #include "data/Statement.h"
 #include "utils/SourceCodeReader.h"
+#include "math/MathEvaluator.h"
 #include <vector>
-#include <list>
 #include <stack>
 
 namespace turbolang {
