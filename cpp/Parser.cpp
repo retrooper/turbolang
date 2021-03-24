@@ -397,31 +397,37 @@ namespace turbolang {
                 bool signedType = typeToken.text.find('u') != 0;
                 bool checkedForSemiColon = false;
                 llvm::Value *allocatedValue = nullptr;
-
-                currentToken--;
-                std::optional<Token> nextToken = expectToken();
-                while (true) {
-                    if (nextToken.has_value()) {
-                        if (isMathematicalOperator(nextToken.value().text)) {
-                            currentToken--;
-                            currentToken--;
-                            allocatedValue = parseMathematicalExpression();
-                            currentToken--;
+                auto currentTokenState = currentToken;
+                bool mathSuccess = false;
+                if (variableValueToken.has_value()) {
+                    currentToken--;
+                    std::optional<Token> nextToken = expectToken();
+                    while (true) {
+                        if (nextToken.has_value()) {
+                            if (isMathematicalOperator(nextToken.value().text)) {
+                                currentToken--;
+                                currentToken--;
+                                allocatedValue = parseMathematicalExpression();
+                                currentToken--;
+                                mathSuccess = true;
+                            } else if (nextToken.value().text == "(") {
+                                //Skip number after '('
+                                currentToken++;
+                                nextToken = expectToken();
+                                currentToken--;
+                                continue;
+                            } else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
+                                       nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL ||
+                                       nextToken.value().type == TOKEN_TYPE_IDENTIFIER) {
+                                nextToken = expectToken();
+                                continue;
+                            }
+                            break;
                         }
-                        else if (nextToken.value().text == "(") {
-                            //Skip number after '('
-                            currentToken++;
-                            nextToken = expectToken();
-                            currentToken--;
-                            continue;
-                        }
-                        else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
-                        nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL) {
-                            nextToken = expectToken();
-                            continue;
-                        }
-                        break;
                     }
+                }
+                if (!mathSuccess) {
+                    currentToken = currentTokenState;
                 }
                 if (allocatedValue == nullptr && variableValueToken.has_value()) {
                     switch (variableValueToken.value().type) {
@@ -431,6 +437,7 @@ namespace turbolang {
                                 currentToken--;
                                 allocatedValue = parseFunctionCall(statement, variableValueToken.value().text);
                                 checkedForSemiColon = true;
+                                std::cout << "oof: " << currentToken->text << std::endl;
                             } else {
                                 if (variableValueToken.value().text.find('&') == 0) {
                                     //Starts with '&', its a pointer
@@ -504,31 +511,39 @@ namespace turbolang {
             statement.type = VARIABLE_MODIFICATION;
             statement.name = variableNameToken.value().text;
             llvm::Value *val = nullptr;
-            currentToken--;
-            std::optional<Token> nextToken = expectToken();
-            while (true) {
-                if (nextToken.has_value()) {
-                    if (isMathematicalOperator(nextToken.value().text)) {
-                        currentToken--;
-                        currentToken--;
-                        val = parseMathematicalExpression();
-                        currentToken--;
+            auto currentTokenState = currentToken;
+            bool mathSuccess = false;
+            if (variableValueToken.has_value()) {
+                currentToken--;
+                std::optional<Token> nextToken = expectToken();
+                while (true) {
+                    if (nextToken.has_value()) {
+                        if (isMathematicalOperator(nextToken.value().text)) {
+                            currentToken--;
+                            currentToken--;
+                            val = parseMathematicalExpression();
+                            currentToken--;
+                            mathSuccess = true;
+                        } else if (nextToken.value().text == "(") {
+                            //Skip number after '('
+                            currentToken++;
+                            nextToken = expectToken();
+                            currentToken--;
+                            continue;
+                        } else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
+                                   nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL ||
+                                   nextToken.value().type == TOKEN_TYPE_IDENTIFIER) {
+                            nextToken = expectToken();
+                            continue;
+                        }
+                        break;
                     }
-                    else if (nextToken.value().text == "(") {
-                        //Skip number after '('
-                        currentToken++;
-                        nextToken = expectToken();
-                        currentToken--;
-                        continue;
-                    }
-                    else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
-                             nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL) {
-                        nextToken = expectToken();
-                        continue;
-                    }
-                    break;
                 }
             }
+            if (!mathSuccess) {
+                currentToken = currentTokenState;
+            }
+
             if (val == nullptr) {
                 switch (variableValueToken.value().type) {
                     case TOKEN_TYPE_IDENTIFIER:
@@ -771,7 +786,7 @@ namespace turbolang {
                 break;
             }
         }
-        return MathEvaluator::eval(expressionTokens);
+        return MathEvaluator::eval(expressionTokens, Function::functionMap[currentFuncName]);
     }
 
     bool Parser::isMathematicalOperator(const std::string &op) {

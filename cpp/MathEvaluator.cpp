@@ -7,7 +7,7 @@ namespace turbolang {
             {"/", 10},
     };
 
-    llvm::Value *MathEvaluator::eval(const std::vector<Token> &tokens) {
+    llvm::Value *MathEvaluator::eval(const std::vector<Token> &tokens, Function& currentFunction) {
         std::string exprStr;
         for (const auto& t : tokens) {
             exprStr += t.text;
@@ -21,6 +21,10 @@ namespace turbolang {
             }
             else if (token.type == TOKEN_TYPE_DOUBLE_LITERAL) {
                 numberStack.push(llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_DOUBLE), std::stod(token.text)));
+            }
+            else if (token.type == TOKEN_TYPE_IDENTIFIER) {
+                llvm::Value* variableValue = currentFunction.getValue(token.text);
+                numberStack.push(variableValue);
             }
             else if (token.text == "(") {
                 operatorStack.push(token.text);
