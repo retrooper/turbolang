@@ -1,5 +1,5 @@
- declare int32 usleep(int32);
+ declare i32 usleep(i32);
 
- void sleep(int32 microseconds) {
+ void sleep(i32 microseconds) {
     usleep(microseconds);
  }
