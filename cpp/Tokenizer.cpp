@@ -78,6 +78,8 @@ namespace turbolang {
                 case '*':
                 case '/':
                 case '+':
+                case '[':
+                case ']':
                     if (currentToken.type != TOKEN_TYPE_STRING_LITERAL) {
                         endToken(&currentToken, &tokens);
                         currentToken.type = TOKEN_TYPE_OPERATOR;

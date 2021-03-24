@@ -365,12 +365,32 @@ namespace turbolang {
     }
 
     void Parser::parseVariableDeclaration(Statement &statement, const Token &typeToken) {
+        bool isArray = false;
+        int arraySize;
         auto varType = Type::getType(typeToken.text);
         if (varType.has_value()) {
-            auto variableNameToken = expectTokenType(TOKEN_TYPE_IDENTIFIER);
-            if (variableNameToken.has_value()) {
+            std::string varName;
+            auto variableNameOrOpeningBracketToken = expectToken();
+            if (variableNameOrOpeningBracketToken.has_value()) {
+                if (variableNameOrOpeningBracketToken.value().text == "[") {
+                    isArray = true;
+                    auto arraySizeLiteralToken = expectTokenType(TOKEN_TYPE_INTEGER_LITERAL);
+                    if (arraySizeLiteralToken.has_value()) {
+                        auto closingBracketToken = expectTokenType(TOKEN_TYPE_OPERATOR, "]");
+                        if (closingBracketToken.has_value()) {
+                            auto varNameToken = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+                            if (varNameToken.has_value()) {
+                                arraySize = std::stoi(arraySizeLiteralToken.value().text);
+                                varName = varNameToken.value().text;
+                            }
+                        }
+                    }
+                }
+                else {
+                    varName = variableNameOrOpeningBracketToken.value().text;
+                }
                 statement.type = VARIABLE_DECLARATION;
-                statement.name = variableNameToken.value().text;
+                statement.name = varName;
                 auto equalsOperator = expectTokenType(TOKEN_TYPE_OPERATOR, "=");
                 auto variableValueToken = equalsOperator.has_value() ? expectToken() : std::nullopt;
                 llvm::Type *type = Type::getLLVMType(varType.value());
@@ -440,23 +460,32 @@ namespace turbolang {
                             break;
                         case TOKEN_TYPE_STRING_LITERAL:
                             allocatedValue = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
-                                    variableValueToken.value().text, variableNameToken.value().text);
+                                    variableValueToken.value().text, varName);
                             break;
                         default:
                             throw std::runtime_error("Unsupported variable value Token!");
                     }
                 }
-                llvm::AllocaInst *allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type, nullptr,
-                                                                                              llvm::Twine(
-                                                                                                      variableNameToken.value().text));
+                llvm::AllocaInst* allocaInst;
+                if (isArray) {
+                    allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type,
+                                                                                llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_INT),
+                                                                                                       llvm::APInt(32, arraySize)),
+                                                                                                       llvm::Twine(varName));
+                }
+                else {
+                    allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type, nullptr,
+                                                                                                  llvm::Twine(
+                                                                                                          varName));
+                }
                 Function::functionMap[currentFuncName].setAllocaInst(
-                        variableNameToken.value().text, allocaInst);
+                        varName, allocaInst);
                 if (variableValueToken.has_value()) {
                     if (allocatedValue == nullptr) {
                         allocatedValue = allocaInst->getOperand(0);
                     }
 
-                    Function::functionMap[currentFuncName].setValue(variableNameToken.value().text, allocatedValue);
+                    Function::functionMap[currentFuncName].setValue(varName, allocatedValue);
                 }
 
                 if (!checkedForSemiColon && !expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
