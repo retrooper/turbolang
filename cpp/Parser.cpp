@@ -321,7 +321,6 @@ namespace turbolang {
         }
 
         if (!expectTokenType(TOKEN_TYPE_OPERATOR, "}").has_value()) {
-            std::cerr << currentToken->text << std::endl;
             throw std::runtime_error("Unbalanced '}'. Line: " + std::to_string(currentToken->lineNumber));
         }
         return statements;
@@ -389,7 +388,8 @@ namespace turbolang {
                                 if (variableValueToken.value().text.find('&') == 0) {
                                     //Starts with '&', its a pointer
                                     allocatedValue = Function::functionMap[currentFuncName].getAllocaInst(
-                                            variableValueToken.value().text);
+                                            variableValueToken.value().text.substr(1));
+
                                 } else {
                                     currentToken--;
                                     auto boolVal = expectBooleanValue();
@@ -422,8 +422,7 @@ namespace turbolang {
                     }
                 }
                 llvm::AllocaInst *allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type, nullptr,
-                                                                                              llvm::Twine(
-                                                                                                      variableNameToken.value().text));
+                                                                                              llvm::Twine(variableNameToken.value().text));
                 Function::functionMap[currentFuncName].setAllocaInst(
                         variableNameToken.value().text, allocaInst);
                 if (variableValueToken.has_value()) {
@@ -470,7 +469,7 @@ namespace turbolang {
                             if (variableValueToken.value().text.find('&') == 0) {
                                 //Starts with '&', its a pointer
                                 val = Function::functionMap[currentFuncName].getAllocaInst(
-                                        variableValueToken.value().text);
+                                        variableValueToken.value().text.substr(1));
                             } else {
                                 currentToken--;
                                 auto boolVal = expectBooleanValue();

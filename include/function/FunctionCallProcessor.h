@@ -1,6 +1,7 @@
 #pragma once
 #include "function/internal/FunctionInternal.h"
 #include <map>
+#include <iostream>
 namespace turbolang {
     class FunctionCallProcessor {
     public:

@@ -1,12 +1,9 @@
-import "time"
 import "io"
-
 int32 main() {
-    bool yes = false;
-   while (yes) {
-        println("Test");
-        sleep(1000000);
-        yes = false;
-   }
-   return 0;
+    int8 value;
+    int8_ptr valuePtr = &value;
+    scanf("%i", valuePtr);
+    printf("%i\n", value);
+    return 0;
 }
+#FIX UNSIGNED AND SIGNED INTEGERS, CURRENT SIGNED ONES ARE UNSIGNED???
