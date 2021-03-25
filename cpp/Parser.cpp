@@ -516,7 +516,6 @@ namespace turbolang {
                     allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type, nullptr,
                                                                                 llvm::Twine(
                                                                                         varName));
-                    std::cout << "yee" << std::endl;
                 }
                 Function::functionMap[currentFuncName].setAllocaInst(
                         varName, allocaInst);
@@ -595,8 +594,7 @@ namespace turbolang {
                     }
                 }
             }
-            std::cout << "name: " << variableNameToken.value().text << std::endl;
-            Function::functionMap[currentFuncName].setValue(variableNameToken.value().text, val);//TODO fix no type???
+            Function::functionMap[currentFuncName].setValue(variableNameToken.value().text, val);
             if (!checkedForSemiColon && !expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
             }

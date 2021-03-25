@@ -1,10 +1,8 @@
 import "io"
 i32 main() {
-    i32 i = 2;
-    printf("%s%i\n", "Yea: ", i);
-    while (true) {
-        i = i + i;
-        printf("%s%i\n", "I: ", i);
-    }
+    #TODO FIX MATH EXPRESSIONS FOR FLOATING POINTS
+    f64 a = 10.2;
+    a = a + 1;
+    printf("%f\n", a);
     return 0;
 }
