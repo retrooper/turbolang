@@ -1,12 +1,11 @@
 #pragma once
 
-#include "tokenizer/Tokenizer.h"
+#include "token/Tokenizer.h"
 #include "function/FunctionCallProcessor.h"
 #include "function/Function.h"
 #include "utils/Compiler.h"
 #include "utils/Type.h"
 #include "utils/DataType.h"
-#include "data/Statement.h"
 #include "utils/SourceCodeReader.h"
 #include "math/MathEvaluator.h"
 #include <vector>
@@ -27,7 +26,7 @@ namespace turbolang {
 
         static bool expectFunctionDefinition();
 
-        static std::optional<std::vector<Statement>> parseFunctionBody();
+        static void parseFunctionBody();
 
         static std::optional<Token> expectTokenType(const TokenType &type, const std::string &name);
 
@@ -41,7 +40,7 @@ namespace turbolang {
 
         static std::optional<bool> expectBooleanValue();
 
-        static std::optional<Statement> parseStatement();
+        static void parseStatement();
 
         static void parseFunctionDeclareStatement();
 
@@ -49,15 +48,15 @@ namespace turbolang {
 
         static void parseClassDefinition();
 
-        static void parseVariableDeclaration(Statement &statement, const Token &typeToken);
+        static void parseVariableDeclaration(const Token &typeToken);
 
-        static void parseVariableModification(Statement &statement, const std::optional<Token> &variableName);
+        static void parseVariableModification(const std::optional<Token> &variableName);
 
-        static llvm::Value *parseFunctionCall(Statement &statement, const std::string &functionName);
+        static llvm::Value *parseFunctionCall(const std::string &functionName);
 
-        static void parseWhileLoop(Statement &statement);
+        static void parseWhileLoop();
 
-        static void parseReturn(Statement &statement);
+        static void parseReturn();
 
         static bool isMathematicalOperator(const std::string& op);
 

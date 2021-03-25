@@ -2,7 +2,7 @@
 #include "utils/llvm/LLVMManager.h"
 #include "utils/Type.h"
 #include "function/Function.h"
-#include "tokenizer/Tokenizer.h"
+#include "token/Token.h"
 #include <stack>
 #include <vector>
 namespace turbolang {

@@ -1,7 +1,7 @@
 #include "utils/TimeUtil.h"
 #include "utils/Compiler.h"
 #include "utils/llvm/LLVMManager.h"
-#include "tokenizer/Tokenizer.h"
+#include "token/Tokenizer.h"
 #include "parser/Parser.h"
 #include "utils/SourceCodeReader.h"
 #include <iostream>

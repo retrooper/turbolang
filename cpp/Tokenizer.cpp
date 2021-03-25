@@ -1,4 +1,4 @@
-#include "tokenizer/Tokenizer.h"
+#include "token/Tokenizer.h"
 
 namespace turbolang {
     std::vector<Token> Tokenizer::tokenize(const std::string &code) {
@@ -153,6 +153,23 @@ namespace turbolang {
 
     void Tokenizer::endToken(Token *token, std::vector<turbolang::Token> *tokens) {
         if (token->type != TOKEN_TYPE_WHITESPACE) {
+            if (token->type == TOKEN_TYPE_IDENTIFIER) {
+                if (token->text == "while") {
+                    token->type = TOKEN_TYPE_WHILE;
+                }
+                else if (token->text == "return") {
+                    token->type = TOKEN_TYPE_RETURN;
+                }
+                else if (token->text == "if") {
+                    token->type = TOKEN_TYPE_IF;
+                }
+                else if (token->text == "elif") {
+                    token->type = TOKEN_TYPE_ELSE_IF;
+                }
+                else if (token->text == "else") {
+                    token->type = TOKEN_TYPE_ELSE;
+                }
+            }
             tokens->push_back(*token);
         } else if (token->type == TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL) {
             if (token->text == ".") {
