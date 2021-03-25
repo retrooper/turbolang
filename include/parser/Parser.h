@@ -28,6 +28,8 @@ namespace turbolang {
 
         static void parseFunctionBody();
 
+        static std::optional<llvm::Value*> expectExpression();
+
         static std::optional<Token> expectTokenType(const TokenType &type, const std::string &name);
 
         static std::optional<Token> expectTokenType(const TokenType &type);

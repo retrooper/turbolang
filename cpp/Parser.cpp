@@ -5,7 +5,7 @@ namespace turbolang {
     std::vector<Token>::iterator Parser::endToken;
     std::string Parser::currentFuncName;
 
-    void Parser::parse(std::vector <Token> &tokens) {
+    void Parser::parse(std::vector<Token> &tokens) {
         endToken = tokens.end();
         currentToken = tokens.begin();
         if (currentToken->type == TOKEN_TYPE_IDENTIFIER && currentToken->text == "import") {
@@ -55,7 +55,7 @@ namespace turbolang {
                     auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR);
                     if (openingParenthesis.has_value()) {
                         bool expectingComma = false;
-                        std::vector < llvm::Type * > functionArgumentTypes;
+                        std::vector<llvm::Type *> functionArgumentTypes;
                         bool argumentSizeConstant = true;
                         auto closingParenthesis = expectToken();
                         if (closingParenthesis.has_value() && closingParenthesis.value().text != ")") {
@@ -122,7 +122,7 @@ namespace turbolang {
     }
 
     void Parser::parseImportStatement() {
-        std::vector <std::string> importedModules;
+        std::vector<std::string> importedModules;
         bool importPending = false;
         while (true) {
             auto nextToken = expectTokenType(TOKEN_TYPE_IDENTIFIER, "import");
@@ -156,7 +156,7 @@ namespace turbolang {
                 throw std::runtime_error("Failed to read module: " + modulesPath + "/" + module);
             }
             std::filesystem::current_path(basePath);
-            std::vector <Token> tokens = Tokenizer::tokenize(code);
+            std::vector<Token> tokens = Tokenizer::tokenize(code);
             auto prevCurrToken = currentToken;
             auto prevEndToken = endToken;
             auto prevCurrFuncName = currentFuncName;
@@ -168,7 +168,37 @@ namespace turbolang {
         }
     }
 
-    std::optional <Token> Parser::expectTokenType(const TokenType &type, const std::string &name) {
+    std::optional<llvm::Value *> Parser::expectExpression() {
+        llvm::Value* expressionResult;
+        currentToken--;
+        std::optional<Token> nextToken = expectToken();
+        while (true) {
+            if (nextToken.has_value()) {
+                if (isMathematicalOperator(nextToken.value().text)) {
+                    currentToken--;
+                    currentToken--;
+                    expressionResult = parseMathematicalExpression();
+                    currentToken--;
+                    return expressionResult;
+                } else if (nextToken.value().text == "(") {
+                    //Skip number after '('
+                    currentToken++;
+                    nextToken = expectToken();
+                    currentToken--;
+                    continue;
+                } else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
+                           nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL ||
+                           nextToken.value().type == TOKEN_TYPE_IDENTIFIER) {
+                    nextToken = expectToken();
+                    continue;
+                }
+                break;
+            }
+        }
+        return std::nullopt;
+    }
+
+    std::optional<Token> Parser::expectTokenType(const TokenType &type, const std::string &name) {
         if (currentToken == endToken) {
             return std::nullopt;
         }
@@ -184,11 +214,11 @@ namespace turbolang {
         return *returnToken;
     }
 
-    std::optional <Token> Parser::expectTokenType(const TokenType &type) {
+    std::optional<Token> Parser::expectTokenType(const TokenType &type) {
         return expectTokenType(type, "");
     }
 
-    std::optional <Token> Parser::expectToken() {
+    std::optional<Token> Parser::expectToken() {
         if (currentToken == endToken) {
             return std::nullopt;
         }
@@ -197,10 +227,10 @@ namespace turbolang {
         return *returnToken;
     }
 
-    std::optional <DataType> Parser::expectTokenVariableType() {
-        std::optional <Token> identifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+    std::optional<DataType> Parser::expectTokenVariableType() {
+        std::optional<Token> identifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
         if (identifier.has_value()) {
-            std::optional <DataType> optionalVarType = Type::getType(identifier.value().text);
+            std::optional<DataType> optionalVarType = Type::getType(identifier.value().text);
             if (optionalVarType.has_value() && optionalVarType.value() != DATA_TYPE_VOID) {
                 return optionalVarType.value();
             }
@@ -208,10 +238,10 @@ namespace turbolang {
         return std::nullopt;
     }
 
-    std::optional <DataType> Parser::expectTokenFunctionType() {
-        std::optional <Token> identifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+    std::optional<DataType> Parser::expectTokenFunctionType() {
+        std::optional<Token> identifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
         if (identifier.has_value()) {
-            std::optional <DataType> optionalFuncType = Type::getType(identifier.value().text);
+            std::optional<DataType> optionalFuncType = Type::getType(identifier.value().text);
             if (optionalFuncType.has_value()) {
                 return optionalFuncType.value();
             }
@@ -220,7 +250,7 @@ namespace turbolang {
     }
 
     std::optional<bool> Parser::expectBooleanValue() {
-        std::optional <Token> identifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+        std::optional<Token> identifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
         if (identifier.has_value()) {
             if (identifier.value().text == "true") {
                 return true;
@@ -322,9 +352,8 @@ namespace turbolang {
                         parseStatement();
                         //Finished processing a statement. We are expecting the function body to end here.
                         if (expectTokenType(TOKEN_TYPE_OPERATOR, "}").has_value()) {
-                           return;
-                        }
-                        else {
+                            return;
+                        } else {
                             //Why didn't the function body end?
                             throw std::runtime_error(
                                     "Unbalanced '}'. Line: " + std::to_string(currentToken->lineNumber));
@@ -344,43 +373,57 @@ namespace turbolang {
         if (token.has_value()) {
             if (token.value().type == TOKEN_TYPE_WHILE) {
                 parseWhileLoop();
-            }
-            else if (token.value().type == TOKEN_TYPE_RETURN) {
+            } else if (token.value().type == TOKEN_TYPE_RETURN) {
                 parseReturn();
-            }
-            else if (token.value().type == TOKEN_TYPE_IDENTIFIER) {
+            } else if (token.value().type == TOKEN_TYPE_IDENTIFIER) {
+                //Is it a valid data type?
                 if (Type::getType(
                         token.value().text).has_value()) { //TODO support custom classes as types, support strings
-                    //IT IS A VARIABLE DECLARATION
+                    //Then a variable is for sure being declared/created.
                     parseVariableDeclaration(token.value());
-                }
-                else {
-                    auto equalsOperator = expectTokenType(TOKEN_TYPE_OPERATOR, "=");
-                    if (equalsOperator.has_value()) {
-                        //IT IS A VARIABLE MODIFICATION. We pass in variable name
-                        parseVariableModification(token);
-
+                } else {
+                    //Is the next token an operator?
+                    auto operatorToken = expectTokenType(TOKEN_TYPE_OPERATOR);
+                    if (operatorToken.has_value()) {
+                        //Is it an assignment? If yes we are modifying a variable.
+                        if (operatorToken.value().text == "=") {
+                            parseVariableModification(token);
+                        }
+                            //Is it an opening parenthesis? If yes we are calling a function.
+                        else if (operatorToken.value().text == "(") {
+                            parseFunctionCall(token.value().text);
+                        } else {
+                            throw std::runtime_error(
+                                    "Unexpected operator token. Expected an assignment operator or an opening parenthesis! Line: " +
+                                    std::to_string(currentToken->lineNumber));
+                        }
                     } else {
-                        //IT IS A FUNCTION CALL. We pass in the function name
-                        parseFunctionCall(token.value().text);
+                        throw std::runtime_error(
+                                "Unexpected token. Expected an assignment operator or an opening parenthesis! Line: " +
+                                std::to_string(currentToken->lineNumber));
                     }
+
                 }
-            }
-            else {
-                throw std::runtime_error("Failed to parse a statement. A statement cannot start with such a token. Line: " + std::to_string(currentToken->lineNumber));
-                currentToken = startToken;
+            } else {
+                throw std::runtime_error(
+                        "Failed to parse a statement. A statement cannot start with such a token. Line: " +
+                        std::to_string(currentToken->lineNumber));
             }
         } else {
-            throw std::runtime_error("Failed to parse a statement. No token found? Line: " + std::to_string(currentToken->lineNumber));
-            currentToken = startToken;
+            throw std::runtime_error(
+                    "Failed to parse a statement. No token found? Line: " + std::to_string(currentToken->lineNumber));
         }
     }
 
     void Parser::parseVariableDeclaration(const Token &typeToken) {
+        //Is the declared variable an array.
         bool isArray = false;
+        //If the variable is an array, we will store its size in this variable.
         int arraySize;
+        //What type of variable is it?
         auto varType = Type::getType(typeToken.text);
         if (varType.has_value()) {
+            //We will store the variable name.
             std::string varName;
             auto variableNameOrOpeningBracketToken = expectToken();
             if (variableNameOrOpeningBracketToken.has_value()) {
@@ -406,79 +449,59 @@ namespace turbolang {
                 bool signedType = typeToken.text.find('u') != 0;
                 bool checkedForSemiColon = false;
                 llvm::Value *allocatedValue = nullptr;
-                auto currentTokenState = currentToken;
-                bool mathSuccess = false;
+                auto prevTokenState = currentToken;
+                //Handle an expression.
                 if (variableValueToken.has_value()) {
-                    currentToken--;
-                    std::optional <Token> nextToken = expectToken();
-                    while (true) {
-                        if (nextToken.has_value()) {
-                            if (isMathematicalOperator(nextToken.value().text)) {
-                                currentToken--;
-                                currentToken--;
-                                allocatedValue = parseMathematicalExpression();
-                                currentToken--;
-                                mathSuccess = true;
-                            } else if (nextToken.value().text == "(") {
-                                //Skip number after '('
-                                currentToken++;
-                                nextToken = expectToken();
-                                currentToken--;
-                                continue;
-                            } else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
-                                       nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL ||
-                                       nextToken.value().type == TOKEN_TYPE_IDENTIFIER) {
-                                nextToken = expectToken();
-                                continue;
-                            }
-                            break;
-                        }
+                    auto expressionResult = expectExpression();
+                    //Is it really an expression?
+                    if (expressionResult.has_value()) {
+                        //Yes it is, let us get the result.
+                        allocatedValue = expressionResult.value();
                     }
-                }
-                if (!mathSuccess) {
-                    currentToken = currentTokenState;
-                }
-                if (allocatedValue == nullptr && variableValueToken.has_value()) {
-                    switch (variableValueToken.value().type) {
-                        case TOKEN_TYPE_IDENTIFIER:
-                            if (expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value()) {
-                                //ITS A FUNCTION CALL!
-                                currentToken--;
-                                allocatedValue = parseFunctionCall(variableValueToken.value().text);
-                                checkedForSemiColon = true;
-                            } else {
-                                if (variableValueToken.value().text.find('&') == 0) {
-                                    //Starts with '&', its a pointer
-                                    allocatedValue = Function::functionMap[currentFuncName].getAllocaInst(
-                                            variableValueToken.value().text.substr(1));
-
+                    else {
+                        //No it is not, lets act like this never happened.
+                        currentToken = prevTokenState;
+                        //Deal with it like a value. Not an expression.
+                        switch (variableValueToken.value().type) {
+                            case TOKEN_TYPE_IDENTIFIER:
+                                if (expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value()) {
+                                    //ITS A FUNCTION CALL!
+                                    allocatedValue = parseFunctionCall(variableValueToken.value().text);
+                                    checkedForSemiColon = true;
                                 } else {
-                                    currentToken--;
-                                    auto boolVal = expectBooleanValue();
-                                    if (boolVal.has_value()) {
-                                        allocatedValue = llvm::ConstantInt::get(type, llvm::APInt(1, boolVal.value() ? 1
-                                                                                                                     : 0));
+                                    if (variableValueToken.value().text.find('&') == 0) {
+                                        //Starts with '&', its a pointer
+                                        allocatedValue = Function::functionMap[currentFuncName].getAllocaInst(
+                                                variableValueToken.value().text.substr(1));
+
                                     } else {
-                                        allocatedValue = Function::functionMap[currentFuncName].getValue(
-                                                variableValueToken.value().text);
+                                        currentToken--;
+                                        auto boolVal = expectBooleanValue();
+                                        if (boolVal.has_value()) {
+                                            allocatedValue = llvm::ConstantInt::get(type, llvm::APInt(1, boolVal.value() ? 1
+                                                                                                                         : 0));
+                                        } else {
+                                            allocatedValue = Function::functionMap[currentFuncName].getValue(
+                                                    variableValueToken.value().text);
+                                        }
                                     }
                                 }
-                            }
-                            break;
-                        case TOKEN_TYPE_INTEGER_LITERAL:
-                            allocatedValue = llvm::ConstantInt::get(type, std::stol(variableValueToken.value().text),
-                                                                    signedType);
-                            break;
-                        case TOKEN_TYPE_DOUBLE_LITERAL:
-                            allocatedValue = llvm::ConstantFP::get(type,
-                                                                   std::stod(variableValueToken.value().text));
-                            break;
-                        case TOKEN_TYPE_STRING_LITERAL:
-                            allocatedValue = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
-                                    variableValueToken.value().text, varName);
-                            break;
-                        default:
-                            throw std::runtime_error("Unsupported variable value Token!");
+                                break;
+                            case TOKEN_TYPE_INTEGER_LITERAL:
+                                allocatedValue = llvm::ConstantInt::get(type, std::stol(variableValueToken.value().text),
+                                                                        signedType);
+                                break;
+                            case TOKEN_TYPE_DOUBLE_LITERAL:
+                                allocatedValue = llvm::ConstantFP::get(type,
+                                                                       std::stod(variableValueToken.value().text));
+                                break;
+                            case TOKEN_TYPE_STRING_LITERAL:
+                                allocatedValue = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
+                                        variableValueToken.value().text, varName);
+                                break;
+                            default:
+                                throw std::runtime_error("Unsupported variable value Token!");
+                        }
                     }
                 }
                 llvm::AllocaInst *allocaInst;
@@ -493,9 +516,11 @@ namespace turbolang {
                     allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type, nullptr,
                                                                                 llvm::Twine(
                                                                                         varName));
+                    std::cout << "yee" << std::endl;
                 }
                 Function::functionMap[currentFuncName].setAllocaInst(
                         varName, allocaInst);
+                //Check if we are also allocating and not just declaring the variable.
                 if (variableValueToken.has_value()) {
                     if (allocatedValue == nullptr) {
                         allocatedValue = allocaInst->getOperand(0);
@@ -512,90 +537,66 @@ namespace turbolang {
     }
 
 
-    void Parser::parseVariableModification(const std::optional <Token> &variableNameToken) {
+    void Parser::parseVariableModification(const std::optional<Token> &variableNameToken) {
         bool checkedForSemiColon = false;
-        std::optional <Token> variableValueToken = expectToken();
+        std::optional<Token> variableValueToken = expectToken();
         if (variableValueToken.has_value()) {
             llvm::Value *val = nullptr;
-            auto currentTokenState = currentToken;
-            bool mathSuccess = false;
+            auto prevTokenState = currentToken;
             if (variableValueToken.has_value()) {
-                currentToken--;
-                std::optional <Token> nextToken = expectToken();
-                while (true) {
-                    if (nextToken.has_value()) {
-                        if (isMathematicalOperator(nextToken.value().text)) {
-                            currentToken--;
-                            currentToken--;
-                            val = parseMathematicalExpression();
-                            currentToken--;
-                            mathSuccess = true;
-                        } else if (nextToken.value().text == "(") {
-                            //Skip number after '('
-                            currentToken++;
-                            nextToken = expectToken();
-                            currentToken--;
-                            continue;
-                        } else if (nextToken.value().type == TOKEN_TYPE_INTEGER_LITERAL ||
-                                   nextToken.value().type == TOKEN_TYPE_DOUBLE_LITERAL ||
-                                   nextToken.value().type == TOKEN_TYPE_IDENTIFIER) {
-                            nextToken = expectToken();
-                            continue;
-                        }
-                        break;
+                llvm::AllocaInst* allocaInst = Function::functionMap[currentFuncName].getAllocaInst(variableNameToken.value().text);
+                auto expressionResult = expectExpression();
+                //Is it really an expression?
+                if (expressionResult.has_value()) {
+                    //Yes it is, let us get the result.
+                    val = expressionResult.value();
+                }
+                else {
+                    //No it is not, lets act like this never happened.
+                    currentToken = prevTokenState;
+                    //Deal with it like a single value.
+                    switch (variableValueToken.value().type) {
+                        case TOKEN_TYPE_IDENTIFIER:
+                            if (expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value()) {
+                                //ITS A FUNCTION CALL!
+                                val = parseFunctionCall(variableValueToken.value().text);
+                                checkedForSemiColon = true;
+                            } else {
+                                if (variableValueToken.value().text.find('&') == 0) {
+                                    //Starts with '&', its a pointer
+                                    val = Function::functionMap[currentFuncName].getAllocaInst(
+                                            variableValueToken.value().text.substr(1));
+                                } else {
+                                    currentToken--;
+                                    auto boolVal = expectBooleanValue();
+                                    if (boolVal.has_value()) {
+                                        val = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL),
+                                                                     llvm::APInt(1, boolVal.value() ? 1 : 0));
+                                    } else {
+                                        val = Function::functionMap[currentFuncName].getValue(
+                                                variableValueToken.value().text);
+                                    }
+                                }
+                            }
+                            break;
+                        case TOKEN_TYPE_INTEGER_LITERAL:
+                            val = llvm::ConstantInt::get(allocaInst->getType(),llvm::APInt(allocaInst->getAllocatedType()->getIntegerBitWidth(), std::stoi(variableValueToken.value().text), true));
+                            break;
+                        case TOKEN_TYPE_DOUBLE_LITERAL:
+                            val = llvm::ConstantFP::get(allocaInst->getType(),
+                                                        std::stod(variableValueToken.value().text));
+                            break;
+                        case TOKEN_TYPE_STRING_LITERAL:
+                            val = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
+                                    variableValueToken.value().text);
+                            break;
+                        default:
+                            throw std::runtime_error("Unsupported variable value token!");
                     }
                 }
             }
-            if (!mathSuccess) {
-                currentToken = currentTokenState;
-            }
-
-            if (val == nullptr) {
-                switch (variableValueToken.value().type) {
-                    case TOKEN_TYPE_IDENTIFIER:
-                        if (expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value()) {
-                            //ITS A FUNCTION CALL!
-                            currentToken--;
-                            val = parseFunctionCall(variableValueToken.value().text);
-                            checkedForSemiColon = true;
-                        } else {
-                            if (variableValueToken.value().text.find('&') == 0) {
-                                //Starts with '&', its a pointer
-                                val = Function::functionMap[currentFuncName].getAllocaInst(
-                                        variableValueToken.value().text.substr(1));
-                            } else {
-                                currentToken--;
-                                auto boolVal = expectBooleanValue();
-                                if (boolVal.has_value()) {
-                                    val = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL),
-                                                                 llvm::APInt(1, boolVal.value() ? 1 : 0));
-                                } else {
-                                    val = Function::functionMap[currentFuncName].getValue(
-                                            variableValueToken.value().text);
-                                }
-                            }
-                        }
-                        break;
-                    case TOKEN_TYPE_INTEGER_LITERAL:
-                        //TODO get the initial variable type, and make to set isSigned to correct value and its type correctly
-                        val = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_INT),
-                                                     std::stoi(variableValueToken.value().text), true);
-                        break;
-                    case TOKEN_TYPE_DOUBLE_LITERAL:
-                        //TODO get initial var type
-                        val = llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_DOUBLE),
-                                                    std::stod(variableValueToken.value().text));
-                        break;
-                    case TOKEN_TYPE_STRING_LITERAL:
-                        val = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
-                                variableValueToken.value().text);
-                        break;
-                    default:
-                        throw std::runtime_error("Unsupported variable value Token!");
-                }
-
-            }
-            Function::functionMap[currentFuncName].setValue(variableNameToken.value().text, val);
+            std::cout << "name: " << variableNameToken.value().text << std::endl;
+            Function::functionMap[currentFuncName].setValue(variableNameToken.value().text, val);//TODO fix no type???
             if (!checkedForSemiColon && !expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
             }
@@ -603,73 +604,68 @@ namespace turbolang {
     }
 
     llvm::Value *Parser::parseFunctionCall(const std::string &functionName) {
-        std::cout << "name: " << functionName << std::endl;
-        auto openingParenthesisOperator = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
-        if (openingParenthesisOperator.has_value()) {
-            std::vector <Token> arguments;
-            while (!expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
-                auto parameter = expectToken();
-                if (!parameter.has_value()) {
-                    break;
-                }
-
-                arguments.push_back(parameter.value());
-
-                if (expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
-
-                    break;
-                }
-
-                if (!expectTokenType(TOKEN_TYPE_OPERATOR, ",").has_value()) {
-
-                    throw std::runtime_error(
-                            "Expected ',' to separate parameters or ')' to end the parameter list!");
-                }
+        std::vector<Token> arguments;
+        while (!expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
+            auto parameter = expectToken();
+            if (!parameter.has_value()) {
+                break;
             }
 
-            if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
-                std::cerr << "Expected a semicolon at line " << currentToken->lineNumber << std::endl;
-                return nullptr;
+            arguments.push_back(parameter.value());
+
+            if (expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
+
+                break;
             }
-            std::vector < llvm::Value * > llvmFunctionArguments;
-            for (const auto &argument : arguments) {
-                llvm::Value *llvmFunctionArgument = nullptr;
-                switch (argument.type) {
-                    case TOKEN_TYPE_IDENTIFIER:
-                        if (argument.text.find('&') == 0) {
-                            //Its a pointer
-                            llvm::AllocaInst *allocaInst = turbolang::Function::functionMap[currentFuncName].getAllocaInst(
-                                    argument.text.substr(1));
-                            llvmFunctionArgument = allocaInst; //We want the pointer, not the value
-                        } else {
-                            llvmFunctionArgument = Function::functionMap[currentFuncName].getValue(argument.text);
-                        }
-                        break;
-                    case TOKEN_TYPE_INTEGER_LITERAL:
-                        //TODO create byte, short, long
-                        llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
-                                                                      llvm::APInt(32, std::stoi(argument.text)));
-                        break;
-                    case TOKEN_TYPE_DOUBLE_LITERAL:
-                        //TODO support explicit float literals
-                        llvmFunctionArgument = llvm::ConstantFP::get(Type::getLLVMType(
-                                DATA_TYPE_DOUBLE), //TODO get type the function takes in its args
-                                                                     std::stod(argument.text));
-                        break;
-                    case TOKEN_TYPE_STRING_LITERAL:
-                        llvmFunctionArgument = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
-                                argument.text); //TODO civ
-                        break;
-                    default:
-                        throw std::runtime_error("Invalid Token in function argument!");
-                }
-                if (llvmFunctionArgument != nullptr) {
-                    llvmFunctionArguments.push_back(llvmFunctionArgument);
-                }
+
+            if (!expectTokenType(TOKEN_TYPE_OPERATOR, ",").has_value()) {
+
+                throw std::runtime_error(
+                        "Expected ',' to separate parameters or ')' to end the parameter list!");
             }
-            return FunctionCallProcessor::process(functionName, llvmFunctionArguments);
         }
-        return nullptr;
+
+        if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
+            std::cerr << "Expected a semicolon at line " << currentToken->lineNumber << std::endl;
+            return nullptr;
+        }
+        std::vector<llvm::Value *> llvmFunctionArguments;
+        for (const auto &argument : arguments) {
+            llvm::Value *llvmFunctionArgument = nullptr;
+            switch (argument.type) {
+                case TOKEN_TYPE_IDENTIFIER:
+                    if (argument.text.find('&') == 0) {
+                        //Its a pointer
+                        llvm::AllocaInst *allocaInst = turbolang::Function::functionMap[currentFuncName].getAllocaInst(
+                                argument.text.substr(1));
+                        llvmFunctionArgument = allocaInst; //We want the pointer, not the value
+                    } else {
+                        llvmFunctionArgument = Function::functionMap[currentFuncName].getValue(argument.text);
+                    }
+                    break;
+                case TOKEN_TYPE_INTEGER_LITERAL:
+                    //TODO create byte, short, long
+                    llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
+                                                                  llvm::APInt(32, std::stoi(argument.text)));
+                    break;
+                case TOKEN_TYPE_DOUBLE_LITERAL:
+                    //TODO support explicit float literals
+                    llvmFunctionArgument = llvm::ConstantFP::get(Type::getLLVMType(
+                            DATA_TYPE_DOUBLE), //TODO get type the function takes in its args
+                                                                 std::stod(argument.text));
+                    break;
+                case TOKEN_TYPE_STRING_LITERAL:
+                    llvmFunctionArgument = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
+                            argument.text); //TODO civ
+                    break;
+                default:
+                    throw std::runtime_error("Invalid Token in function argument!");
+            }
+            if (llvmFunctionArgument != nullptr) {
+                llvmFunctionArguments.push_back(llvmFunctionArgument);
+            }
+        }
+        return FunctionCallProcessor::process(functionName, llvmFunctionArguments);
     }
 
     void Parser::parseWhileLoop() {
@@ -677,7 +673,7 @@ namespace turbolang {
         if (openingParenthesis.has_value()) {
             llvm::Value *boolValue;
             auto literalBoolValue = expectBooleanValue(); //boolean literal
-            std::optional <Token> identifier = std::nullopt;
+            std::optional<Token> identifier = std::nullopt;
             if (literalBoolValue.has_value()) {
                 boolValue = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL),
                                                    llvm::APInt(1, literalBoolValue.value() ? 1 : 0));
@@ -739,7 +735,6 @@ namespace turbolang {
                             returnValue.value().text);
                     if (expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value()) {
                         //ITS A FUNCTION CALL!
-                        currentToken--;
                         allocatedValue = parseFunctionCall(returnValue.value().text);
                         checkedForSemiColon = true;
                     } else {
@@ -768,8 +763,8 @@ namespace turbolang {
     }
 
     llvm::Value *Parser::parseMathematicalExpression() {
-        std::optional <Token> nextToken;
-        std::vector <Token> expressionTokens;
+        std::optional<Token> nextToken;
+        std::vector<Token> expressionTokens;
         while (true) {
             nextToken = expectToken();
             if (nextToken.has_value() && nextToken.value().text != ";") {

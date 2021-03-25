@@ -17,9 +17,9 @@ void run() {
     long start = turbolang::getCurrentNanoTime();
     std::vector<Token> tokens = Tokenizer::tokenize(code);
     long end = turbolang::getCurrentNanoTime();
-    for (const auto &t : tokens) {
+    /*for (const auto &t : tokens) {
         t.debug();
-    }
+    }*/
     std::cout << "TurboLang took " << (end - start)
               << " nanoseconds to tokenize the source code!" << std::endl;
     start = turbolang::getCurrentNanoTime();

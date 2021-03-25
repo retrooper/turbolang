@@ -8,6 +8,11 @@ namespace turbolang {
     };
 
     llvm::Value *MathEvaluator::eval(const std::vector<Token> &tokens, Function& currentFunction) {
+        std::string s;
+        for (auto a : tokens) {
+            s += a.text;
+        }
+        llvm::outs() << "Expr: " << s << "\n";
         std::stack<llvm::Value *> numberStack;
         std::stack<std::string> operatorStack;
         for (const Token &token : tokens) {

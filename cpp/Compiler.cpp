@@ -28,7 +28,6 @@ void turbolang::Compiler::generate_binary() {
 volatile int turbolang::Compiler::tasksFinished = 0;
 void turbolang::Compiler::generate_executables() {
     auto base_path = std::filesystem::current_path();
-    int totalTasks = 4;
     /*
      * WINDOWS
      */
@@ -69,6 +68,7 @@ void turbolang::Compiler::generate_executables() {
         tasksFinished++;
     });
 
+    int totalTasks = 4;
     while (tasksFinished < totalTasks) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
