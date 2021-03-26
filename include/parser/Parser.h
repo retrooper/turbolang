@@ -14,10 +14,7 @@
 namespace turbolang {
     class Parser {
         friend class Compiler;
-
     public:
-        Parser();
-
         static void parse(std::vector<Token> &tokens);
     private:
         static std::vector<Token>::iterator currentToken;
@@ -28,7 +25,7 @@ namespace turbolang {
 
         static void parseFunctionBody();
 
-        static std::optional<llvm::Value*> expectExpression();
+
 
         static std::optional<Token> expectTokenType(const TokenType &type, const std::string &name);
 
@@ -40,7 +37,9 @@ namespace turbolang {
 
         static std::optional<DataType> expectTokenFunctionType();
 
-        static std::optional<bool> expectBooleanValue();
+        static std::optional<llvm::Value*> expectExpression();
+
+        static std::optional<llvm::Value*> expectSingleValue(std::optional<std::string> variableName, const Token& valueToken);
 
         static void parseStatement();
 

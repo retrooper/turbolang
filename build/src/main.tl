@@ -1,8 +1,12 @@
 import "io"
+import "time"
 i32 main() {
-    #TODO FIX MATH EXPRESSIONS FOR FLOATING POINTS
-    f64 a = 10.2;
-    a = a + 1;
-    printf("%f\n", a);
+    bool running = true;
+   i32 i = 2;
+   while (running) {
+        printf("%i\n", i);
+        sleepms(1000);
+        running = false;
+    }
     return 0;
 }

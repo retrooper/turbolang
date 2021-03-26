@@ -9,6 +9,9 @@ void turbolang::Compiler::generate_byte_code() {
         const char *ouputFileName = "output.ll";
         std::error_code EC;
         outputStream = new llvm::raw_fd_ostream(ouputFileName, EC);
+        if (EC.message() != "Success") {
+            std::cout << "LLVM Compilation error code: " << EC.message() << std::endl;
+        }
         LLVMManager::llvmModule->print(*outputStream, nullptr);
         if (outputStream != &llvm::outs()) {
             delete outputStream;

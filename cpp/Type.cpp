@@ -1,33 +1,41 @@
 #include "utils/Type.h"
 
 namespace turbolang {
-    std::map<const std::string, llvm::Type*> typeMap;
+    struct TypeData {
+        llvm::Type* type;
+        int index;
+        TypeData(llvm::Type* type, int index) {
+            this->type = type;
+            this->index = index;
+        }
+    };
+    std::map<const std::string, TypeData> typeMap;
 
     void initMap() {
         typeMap = {
-                {"void", llvm::Type::getVoidTy(*LLVMManager::llvmCtx)},
-                {"bool", llvm::Type::getInt1Ty(*LLVMManager::llvmCtx)},
-                {"bool_ptr", llvm::Type::getInt1PtrTy(*LLVMManager::llvmCtx)},
-                {"i8",  llvm::Type::getInt8Ty(*LLVMManager::llvmCtx)},
-                {"u8", llvm::Type::getInt8Ty(*LLVMManager::llvmCtx)},
-                {"i8_ptr", llvm::Type::getInt8PtrTy(*LLVMManager::llvmCtx)},
-                {"u8_ptr", llvm::Type::getInt8PtrTy(*LLVMManager::llvmCtx)},
-                {"i16", llvm::Type::getInt16Ty(*LLVMManager::llvmCtx)},
-                {"u16", llvm::Type::getInt16Ty(*LLVMManager::llvmCtx)},
-                {"i16_ptr", llvm::Type::getInt16PtrTy(*LLVMManager::llvmCtx)},
-                {"u16_ptr", llvm::Type::getInt16PtrTy(*LLVMManager::llvmCtx)},
-                {"i32",   llvm::Type::getInt32Ty(*LLVMManager::llvmCtx)},
-                {"u32",   llvm::Type::getInt32Ty(*LLVMManager::llvmCtx)},
-                {"i32_ptr", llvm::Type::getInt32PtrTy(*LLVMManager::llvmCtx)},
-                {"u32_ptr", llvm::Type::getInt32PtrTy(*LLVMManager::llvmCtx)},
-                {"i64", llvm::Type::getInt64Ty(*LLVMManager::llvmCtx)},
-                {"u64", llvm::Type::getInt64Ty(*LLVMManager::llvmCtx)},
-                {"i64_ptr", llvm::Type::getInt64PtrTy(*LLVMManager::llvmCtx)},
-                {"ui64_ptr", llvm::Type::getInt64PtrTy(*LLVMManager::llvmCtx)},
-                {"f32", llvm::Type::getFloatTy(*LLVMManager::llvmCtx)},
-                {"f32_ptr", llvm::Type::getFloatPtrTy(*LLVMManager::llvmCtx)},
-                {"f64", llvm::Type::getDoubleTy(*LLVMManager::llvmCtx)},
-                {"f64_ptr", llvm::Type::getDoublePtrTy(*LLVMManager::llvmCtx)}
+                {"void", {llvm::Type::getVoidTy(*LLVMManager::llvmCtx), 0}},
+                {"bool", {llvm::Type::getInt1Ty(*LLVMManager::llvmCtx), 1}},
+                {"bool_ptr", {llvm::Type::getInt1PtrTy(*LLVMManager::llvmCtx), 2}},
+                {"i8",  {llvm::Type::getInt8Ty(*LLVMManager::llvmCtx), 3}},
+                {"u8", {llvm::Type::getInt8Ty(*LLVMManager::llvmCtx), 4}},
+                {"i8_ptr", {llvm::Type::getInt8PtrTy(*LLVMManager::llvmCtx), 5}},
+                {"u8_ptr", {llvm::Type::getInt8PtrTy(*LLVMManager::llvmCtx), 6}},
+                {"i16", {llvm::Type::getInt16Ty(*LLVMManager::llvmCtx), 7}},
+                {"u16", {llvm::Type::getInt16Ty(*LLVMManager::llvmCtx), 8}},
+                {"i16_ptr", {llvm::Type::getInt16PtrTy(*LLVMManager::llvmCtx), 9}},
+                {"u16_ptr", {llvm::Type::getInt16PtrTy(*LLVMManager::llvmCtx), 10}},
+                {"i32",   {llvm::Type::getInt32Ty(*LLVMManager::llvmCtx), 11}},
+                {"u32",   {llvm::Type::getInt32Ty(*LLVMManager::llvmCtx), 12}},
+                {"i32_ptr", {llvm::Type::getInt32PtrTy(*LLVMManager::llvmCtx), 13}},
+                {"u32_ptr", {llvm::Type::getInt32PtrTy(*LLVMManager::llvmCtx), 14}},
+                {"i64", {llvm::Type::getInt64Ty(*LLVMManager::llvmCtx), 15}},
+                {"u64", {llvm::Type::getInt64Ty(*LLVMManager::llvmCtx), 16}},
+                {"i64_ptr", {llvm::Type::getInt64PtrTy(*LLVMManager::llvmCtx), 17}},
+                {"ui64_ptr", {llvm::Type::getInt64PtrTy(*LLVMManager::llvmCtx), 18}},
+                {"f32",{ llvm::Type::getFloatTy(*LLVMManager::llvmCtx), 19}},
+                {"f32_ptr", {llvm::Type::getFloatPtrTy(*LLVMManager::llvmCtx), 20}},
+                {"f64", {llvm::Type::getDoubleTy(*LLVMManager::llvmCtx), 21}},
+                {"f64_ptr", {llvm::Type::getDoublePtrTy(*LLVMManager::llvmCtx), 22}}
         };
     }
 
@@ -35,12 +43,10 @@ namespace turbolang {
         if (typeMap.empty()) {
             initMap();
         }
-        int index = 0;
         for (auto iter = typeMap.rbegin(); iter != typeMap.rend(); ++iter) {
-            if (index == type) {
-                return iter->second;
+            if (type == iter->second.index) {
+                return iter->second.type;
             }
-            index++;
         }
         return nullptr;
     }
@@ -49,12 +55,10 @@ namespace turbolang {
         if (typeMap.empty()) {
             initMap();
         }
-        int index = 0;
         for (auto iter = typeMap.rbegin(); iter != typeMap.rend(); ++iter) {
             if (iter->first == name) {
-                return static_cast<DataType>(index);
+                return (DataType)iter->second.index;
             }
-            index++;
         }
         return std::nullopt;
     }
