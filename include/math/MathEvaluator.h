@@ -7,6 +7,7 @@
 #include <vector>
 namespace turbolang {
     class MathEvaluator {
+        friend class Tokenizer;
     public:
         static llvm::Value* eval(const std::vector<Token>& tokens, Function& currentFunction);
     private:

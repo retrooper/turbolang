@@ -1,5 +1,6 @@
 #pragma once
 #include "Token.h"
+#include "math/MathEvaluator.h"
 #include <vector>
 #include <stdexcept>
 #include <iostream>

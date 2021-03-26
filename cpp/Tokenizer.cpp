@@ -153,12 +153,10 @@ namespace turbolang {
 
         std::vector<Token> finalTokens;
         std::string lastOperator;
-        for (int i = 0; i < tokens.size(); i++) {
-            Token token = tokens[i];
+        for (const Token& token : tokens) {
             if (token.type == TOKEN_TYPE_OPERATOR) {
-                if ((lastOperator == "(" && token.text == ")") || (lastOperator == token.text) ||
-                    (lastOperator == "!" && token.text == "=") || (lastOperator == "<" && token.text == "=") ||
-                    (lastOperator == ">" && token.text == "=")) {
+                if (MathEvaluator::operatorPrecedenceMap.find(lastOperator + token.text) !=
+                    MathEvaluator::operatorPrecedenceMap.end()) {
                     Token newToken = finalTokens[finalTokens.size() - 1];
                     newToken.text += token.text;
                     finalTokens.at(finalTokens.size() - 1) = newToken;
