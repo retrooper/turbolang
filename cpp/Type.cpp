@@ -57,7 +57,7 @@ namespace turbolang {
         }
         for (auto iter = typeMap.rbegin(); iter != typeMap.rend(); ++iter) {
             if (iter->first == name) {
-                return (DataType)iter->second.index;
+                return static_cast<DataType>(iter->second.index);
             }
         }
         return std::nullopt;

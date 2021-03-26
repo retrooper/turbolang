@@ -1,18 +1,27 @@
 #include "math/MathEvaluator.h"
 namespace turbolang {
     std::map<std::string, int> MathEvaluator::operatorPrecedenceMap = {
-            {"+", 1},
-            {"-", 1},
-            {"*", 10},
-            {"/", 10},
+            //Addition, subtraction
+            {"+",  1},
+            {"-",  1},
+            //Multiplication, division
+            {"*",  10},
+            {"/",  10},
+            //Language operators
+            {"==", 20},
+            {"!=", 20},
+            {"<",  20},
+            {">",  20},
+            {"<=", 20},
+            {">=", 20}
     };
 
     llvm::Value *MathEvaluator::eval(const std::vector<Token> &tokens, Function& currentFunction) {
-        /*std::string s;
+        std::string s;
         for (auto a : tokens) {
-            s += a.text;
+            s += a.text + " ";
         }
-        llvm::outs() << "Expr: " << s << "\n";*/
+        llvm::outs() << "Expr: " << s << "\n";
         std::stack<llvm::Value *> numberStack;
         std::stack<std::string> operatorStack;
         for (const Token &token : tokens) {
@@ -23,7 +32,16 @@ namespace turbolang {
                 numberStack.push(llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_DOUBLE), std::stod(token.text)));
             }
             else if (token.type == TOKEN_TYPE_IDENTIFIER) {
-                llvm::Value* variableValue = currentFunction.getValue(token.text);
+                llvm::Value* variableValue;
+                if (token.text == "true") {
+                    variableValue = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1));
+                }
+                else if (token.text == "false") {
+                    variableValue = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 0));
+                }
+                else {
+                    variableValue = currentFunction.getValue(token.text);
+                }
                 numberStack.push(variableValue);
             }
             else if (token.text == "(") {
@@ -80,6 +98,9 @@ namespace turbolang {
     }
 
     llvm::Value *MathEvaluator::calculate(llvm::Value *a, llvm::Value *b, const std::string &operatorType) {
+        /**
+         * MATHEMATICAL OPERATIONS
+         */
         if (operatorType == "+") {
             if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
                 return LLVMManager::llvmBytecodeBuilder->CreateAdd(a, b);
@@ -113,6 +134,27 @@ namespace turbolang {
                 return LLVMManager::llvmBytecodeBuilder->CreateFDiv(a, b);
             }
         }
+        /**
+         * LANGUAGE OPERATIONS
+         */
+         else if (operatorType == "==") {
+             return LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(a, b);
+         }
+         else if (operatorType == "!=") {
+             return LLVMManager::llvmBytecodeBuilder->CreateICmpNE(a, b);
+         }
+         else if (operatorType == ">") {
+             return LLVMManager::llvmBytecodeBuilder->CreateICmpSGT(a, b);
+         }
+         else if (operatorType == "<") {
+             return LLVMManager::llvmBytecodeBuilder->CreateICmpSLT(a, b);
+         }
+         else if (operatorType == "<=") {
+             return LLVMManager::llvmBytecodeBuilder->CreateICmpSLE(a, b);
+         }
+         else if (operatorType == ">=") {
+             return LLVMManager::llvmBytecodeBuilder->CreateICmpSGE(a, b);
+         }
         return nullptr;
     }
 

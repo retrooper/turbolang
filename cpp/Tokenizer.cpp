@@ -6,6 +6,7 @@ namespace turbolang {
         struct Token currentToken;
         currentToken.lineNumber = 1;
         for (char currChar : code) {
+            bool runningOp = false;
             if (currentToken.type == TOKEN_TYPE_STRING_ESCAPE_SEQUENCE) {
                 switch (currChar) {
                     case 'n':
@@ -40,14 +41,13 @@ namespace turbolang {
                 case '8':
                 case '9':
                     if (currentToken.type == TOKEN_TYPE_WHITESPACE
-                    || currentToken.type == TOKEN_TYPE_POTENTIAL_OPERATOR) {
+                        || currentToken.type == TOKEN_TYPE_POTENTIAL_OPERATOR) {
                         currentToken.type = TOKEN_TYPE_INTEGER_LITERAL;
                         currentToken.text.append(1, currChar);
                     } else if (currentToken.type == TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL) {
                         currentToken.type = TOKEN_TYPE_DOUBLE_LITERAL_POTENTIAL;
                         currentToken.text.append(1, currChar);
-                    }
-                    else {
+                    } else {
                         currentToken.text.append(1, currChar);
                     }
                     break;
@@ -80,6 +80,9 @@ namespace turbolang {
                 case '+':
                 case '[':
                 case ']':
+                case '!':
+                case '<':
+                case '>':
                     if (currentToken.type != TOKEN_TYPE_STRING_LITERAL) {
                         endToken(&currentToken, &tokens);
                         currentToken.type = TOKEN_TYPE_OPERATOR;
@@ -148,7 +151,28 @@ namespace turbolang {
         }
         endToken(&currentToken, &tokens);
 
-        return tokens;
+        std::vector<Token> finalTokens;
+        std::string lastOperator;
+        for (int i = 0; i < tokens.size(); i++) {
+            Token token = tokens[i];
+            if (token.type == TOKEN_TYPE_OPERATOR) {
+                if ((lastOperator == "(" && token.text == ")") || (lastOperator == token.text) ||
+                    (lastOperator == "!" && token.text == "=") || (lastOperator == "<" && token.text == "=") ||
+                    (lastOperator == ">" && token.text == "=")) {
+                    Token newToken = finalTokens[finalTokens.size() - 1];
+                    newToken.text += token.text;
+                    finalTokens.at(finalTokens.size() - 1) = newToken;
+                    lastOperator = ' ';
+                    continue;
+                } else {
+                    lastOperator = token.text;
+                }
+            } else {
+                lastOperator = ' ';
+            }
+            finalTokens.push_back(token);
+        }
+        return finalTokens;
     }
 
     void Tokenizer::endToken(Token *token, std::vector<turbolang::Token> *tokens) {
@@ -156,17 +180,13 @@ namespace turbolang {
             if (token->type == TOKEN_TYPE_IDENTIFIER) {
                 if (token->text == "while") {
                     token->type = TOKEN_TYPE_WHILE;
-                }
-                else if (token->text == "return") {
+                } else if (token->text == "return") {
                     token->type = TOKEN_TYPE_RETURN;
-                }
-                else if (token->text == "if") {
+                } else if (token->text == "if") {
                     token->type = TOKEN_TYPE_IF;
-                }
-                else if (token->text == "elif") {
+                } else if (token->text == "elif") {
                     token->type = TOKEN_TYPE_ELSE_IF;
-                }
-                else if (token->text == "else") {
+                } else if (token->text == "else") {
                     token->type = TOKEN_TYPE_ELSE;
                 }
             }

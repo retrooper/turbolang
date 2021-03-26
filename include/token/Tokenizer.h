@@ -3,6 +3,7 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <optional>
 namespace turbolang {
     static const char *TOKEN_TYPE_STRINGS[] = {
             "TOKEN_TYPE_WHITESPACE",

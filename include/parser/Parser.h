@@ -10,7 +10,7 @@
 #include "math/MathEvaluator.h"
 #include <vector>
 #include <stack>
-
+#include <functional>
 namespace turbolang {
     class Parser {
         friend class Compiler;
@@ -25,8 +25,6 @@ namespace turbolang {
 
         static void parseFunctionBody();
 
-
-
         static std::optional<Token> expectTokenType(const TokenType &type, const std::string &name);
 
         static std::optional<Token> expectTokenType(const TokenType &type);
@@ -37,9 +35,8 @@ namespace turbolang {
 
         static std::optional<DataType> expectTokenFunctionType();
 
-        static std::optional<llvm::Value*> expectExpression();
-
-        static std::optional<llvm::Value*> expectSingleValue(std::optional<std::string> variableName, const Token& valueToken);
+        static llvm::Value* expectExpression(const Token* token = nullptr, const std::string& endAtStr = ";",
+                                             const std::function<void(std::vector<Token>&)>& extraProcessing = [](std::vector<Token>& tokens){});
 
         static void parseStatement();
 
@@ -58,9 +55,5 @@ namespace turbolang {
         static void parseWhileLoop();
 
         static void parseReturn();
-
-        static bool isMathematicalOperator(const std::string& op);
-
-        static llvm::Value* parseMathematicalExpression();
     };
 }
