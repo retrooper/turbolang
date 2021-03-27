@@ -54,6 +54,12 @@ namespace turbolang {
 
         static void parseWhileLoop();
 
-        static void parseReturn();
+        static void parseReturnStatement();
+
+        static void parseIfStatement();
+
+        static void parseElifStatement(llvm::Value*& previousStatementSucceeded);
+
+        static void parseElseStatement(llvm::Value*& previousStatementSucceeded);
     };
 }

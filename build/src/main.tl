@@ -1,13 +1,22 @@
+import "math"
 import "io"
-import "time"
 i32 main() {
-    println("Counting up to 1000...");
-    sleepms(1000);
-    i32 counter = 1;
-    while (counter < 1001) {
-        printf("%s%i\n", "Number: ", counter);
-        counter = counter + 1;
+    #FIX MATH EXPRESSION FALSES FOR NEGATIVE NUMBERS
+    i32 value = 10;
+    if (value == 1) {
+        println("Yes");
     }
-    println("Finished");
+    elif (value == 10) {
+        println("Yes2");
+    }
+    elif (value == 0) {
+        println("Yes3");
+    }
+    elif (value == 3) {
+        println("Yes4");
+    }
+    else {
+        println("Yes5");
+    }
     return 0;
 }

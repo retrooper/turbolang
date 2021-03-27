@@ -101,7 +101,8 @@ namespace turbolang {
                                             continue;
                                         }
                                     }
-                                    throw std::runtime_error("Invalid function argument type: " + nextToken.value().text);
+                                    throw std::runtime_error(
+                                            "Invalid function argument type: " + nextToken.value().text);
                                 }
                             }
                         }
@@ -168,13 +169,21 @@ namespace turbolang {
 
     llvm::Value *Parser::expectExpression(const Token *token, const std::string &endAtStr,
                                           const std::function<void(std::vector<Token> &)> &extraProcessing) {
+        auto beforeFunctionCallCheck = currentToken;
+        auto functionNameToken = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+        if (functionNameToken.has_value()) {
+            auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
+            if (openingParenthesis.has_value()) {
+                return Parser::parseFunctionCall(functionNameToken.value().text);
+            }
+        }
+        currentToken = beforeFunctionCallCheck;
         std::optional<Token> nextToken;
         std::vector<Token> expressionTokens;
         if (token != nullptr) {
             expressionTokens.push_back(*token);
         }
-        std::optional<Token> tempToken = std::nullopt;
-
+        std::optional<Token> tempToken;
         while (true) {
             nextToken = expectToken();
             if (nextToken.has_value() && nextToken.value().text != endAtStr) {
@@ -288,23 +297,18 @@ namespace turbolang {
                 //Store the function in the map for fast access by name.
                 Function::functionMap[function.name] = function;
                 currentFuncName = function.name;
-                bool success = false;
                 try {
                     //Parse the functions body.
                     parseFunctionBody();
-                    success = true;
                 }
                 catch (std::exception &ex) {
                     ex.what();
+                    currentToken = parseStart;
+                    return false;
                 }
                 if (function.type == DATA_TYPE_VOID) {
                     LLVMManager::llvmBytecodeBuilder->CreateRet(nullptr);
                 }
-                if (!success) {
-                    currentToken = parseStart;
-                    return false;
-                }
-
                 return true;
             } else {
                 currentToken = parseStart;
@@ -350,46 +354,55 @@ namespace turbolang {
         std::vector<Token>::iterator startToken;
         auto token = expectToken();
         if (token.has_value()) {
-            if (token.value().type == TOKEN_TYPE_WHILE) {
-                parseWhileLoop();
-            } else if (token.value().type == TOKEN_TYPE_RETURN) {
-                parseReturn();
-            } else if (token.value().type == TOKEN_TYPE_IDENTIFIER) {
-                //Is it a valid data type?
-                if (Type::getType(
-                        token.value().text).has_value()) { //TODO support custom classes as types, support strings
-                    //Then a variable is for sure being declared/created.
-                    parseVariableDeclaration(token.value());
-                } else {
-                    //Is the next token an operator?
-                    auto operatorToken = expectTokenType(TOKEN_TYPE_OPERATOR);
-                    if (operatorToken.has_value()) {
-                        //Is it an assignment? If yes we are modifying a variable.
-                        if (operatorToken.value().text == "=") {
-                            parseVariableModification(token);
-                        }
-                            //Is it an opening parenthesis? If yes we are calling a function.
-                        else if (operatorToken.value().text == "(") {
-                            parseFunctionCall(token.value().text);
-                            if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
-                                throw std::runtime_error(&"Expected a semicolon at line "[currentToken->lineNumber]);
+            switch (token.value().type) {
+                case TOKEN_TYPE_WHILE:
+                    parseWhileLoop();
+                    break;
+                case TOKEN_TYPE_RETURN:
+                    parseReturnStatement();
+                    break;
+                case TOKEN_TYPE_IF:
+                    parseIfStatement();
+                    break;
+                case TOKEN_TYPE_IDENTIFIER:
+                    //Is it a valid data type?
+                    if (Type::getType(
+                            token.value().text).has_value()) { //TODO support custom classes as types, support strings
+                        //Then a variable is for sure being declared/created.
+                        parseVariableDeclaration(token.value());
+                    } else {
+                        //Is the next token an operator?
+                        auto operatorToken = expectTokenType(TOKEN_TYPE_OPERATOR);
+                        if (operatorToken.has_value()) {
+                            //Is it an assignment? If yes we are modifying a variable.
+                            if (operatorToken.value().text == "=") {
+                                parseVariableModification(token);
+                            }
+                                //Is it an opening parenthesis? If yes we are calling a function.
+                            else if (operatorToken.value().text == "(") {
+                                parseFunctionCall(token.value().text);
+                                if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
+                                    throw std::runtime_error(
+                                            &"Expected a semicolon at line "[currentToken->lineNumber]);
+                                }
+                            } else {
+                                throw std::runtime_error(
+                                        "Unexpected operator token. Expected an assignment operator or an opening parenthesis! Line: " +
+                                        std::to_string(currentToken->lineNumber));
                             }
                         } else {
                             throw std::runtime_error(
-                                    "Unexpected operator token. Expected an assignment operator or an opening parenthesis! Line: " +
+                                    "Unexpected token. Expected an assignment operator or an opening parenthesis! Line: " +
                                     std::to_string(currentToken->lineNumber));
                         }
-                    } else {
-                        throw std::runtime_error(
-                                "Unexpected token. Expected an assignment operator or an opening parenthesis! Line: " +
-                                std::to_string(currentToken->lineNumber));
-                    }
 
-                }
-            } else {
-                throw std::runtime_error(
-                        "Failed to parse a statement. A statement cannot start with such a token. Line: " +
-                        std::to_string(currentToken->lineNumber));
+                    }
+                    break;
+                default:
+                    throw std::runtime_error(
+                            "Failed to parse a statement. A statement cannot start with such a token. Line: " +
+                            std::to_string(currentToken->lineNumber));
+                    break;
             }
         } else {
             throw std::runtime_error(
@@ -501,12 +514,10 @@ namespace turbolang {
             }
 
             if (!expectTokenType(TOKEN_TYPE_OPERATOR, ",").has_value()) {
-
                 throw std::runtime_error(
                         "Expected ',' to separate parameters or ')' to end the parameter list!");
             }
         }
-
         std::vector<llvm::Value *> llvmFunctionArguments;
         for (const auto &argument : arguments) {
             llvm::Value *llvmFunctionArgument;
@@ -602,7 +613,6 @@ namespace turbolang {
     void Parser::parseWhileLoop() {
         auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
         if (openingParenthesis.has_value()) {
-            //TODO handle expressions
             auto loopCheckState = currentToken;
             auto extraProcessing = [](std::vector<Token> &tokens) {
                 tokens.pop_back();
@@ -620,7 +630,7 @@ namespace turbolang {
                     Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
             LLVMManager::llvmBytecodeBuilder->CreateCondBr(comp, loop, afterLoop);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(loop);
-        currentToken--;
+            currentToken--;
             parseFunctionBody();
             auto prevCurrentTokenState = currentToken;
             currentToken = loopCheckState;
@@ -634,7 +644,7 @@ namespace turbolang {
         }
     }
 
-    void Parser::parseReturn() {
+    void Parser::parseReturnStatement() {
         llvm::Value *llvmReturnValue;
         auto returnValue = expectToken();
         if (returnValue.has_value()) {
@@ -654,5 +664,108 @@ namespace turbolang {
         if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
             throw std::runtime_error("Expected semicolon!");
         }
+    }
+
+    void Parser::parseIfStatement() {
+        auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
+        if (openingParenthesis.has_value()) {
+            auto extraProcessing = [](std::vector<Token> &tokens) {
+                tokens.pop_back();
+            };
+            llvm::Value *statementValue = expectExpression(nullptr, "{", extraProcessing);
+            Function *function = &Function::functionMap[currentFuncName];
+            llvm::BasicBlock *statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "if-statement",
+                                                                   function->llvmFunction);
+
+            llvm::BasicBlock *afterStatement =
+                    llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-if-statement",
+                                             function->llvmFunction);
+
+            auto comp = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue, llvm::ConstantInt::get(
+                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
+            LLVMManager::llvmBytecodeBuilder->CreateCondBr(comp, statement, afterStatement);
+            LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
+            currentToken--;
+            parseFunctionBody();
+            LLVMManager::llvmBytecodeBuilder->CreateBr(afterStatement);
+            LLVMManager::llvmBytecodeBuilder->SetInsertPoint(afterStatement);
+            auto beforeCheck = currentToken;
+            while (true) {
+                auto elseIfToken = expectTokenType(TOKEN_TYPE_ELSE_IF);
+                if (elseIfToken.has_value()) {
+                    parseElifStatement(comp);
+                    beforeCheck = currentToken;
+                    //Check if an else statement exists...
+                    auto elseToken = expectTokenType(TOKEN_TYPE_ELSE);
+                    if (elseToken.has_value()) {
+                        parseElseStatement(comp);
+                        break;
+                    } else {
+                        //No else statement, we are done...
+                        //currentToken = beforeCheck;
+                        continue;
+                    }
+                } else {
+                    currentToken = beforeCheck;
+                    //Check if an else statement exists...
+                    auto elseToken = expectTokenType(TOKEN_TYPE_ELSE);
+                    if (elseToken.has_value()) {
+                        parseElseStatement(comp);
+                    } else {
+                        //No else statement, we are done...
+                        currentToken = beforeCheck;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    void Parser::parseElifStatement(llvm::Value*& previousStatementSucceeded) {
+        Function *function = &Function::functionMap[currentFuncName];
+        auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
+        if (openingParenthesis.has_value()) {
+            auto extraProcessing = [](std::vector<Token> &tokens) {
+                tokens.pop_back();
+            };
+            //Check if the previous statement is untrue.
+            auto statementValue = expectExpression(nullptr, "{", extraProcessing);
+            auto statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "elif-statement",
+                                                      function->llvmFunction);
+            auto afterStatement =
+                    llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-elif-statement",
+                                             function->llvmFunction);
+            auto localCondition = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue, llvm::ConstantInt::get(
+                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
+            auto againstPreviousComp =  LLVMManager::llvmBytecodeBuilder->CreateICmpNE(previousStatementSucceeded, llvm::ConstantInt::get(
+                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
+            auto bothConditions = LLVMManager::llvmBytecodeBuilder->CreateAnd(localCondition, againstPreviousComp);
+            LLVMManager::llvmBytecodeBuilder->CreateCondBr(bothConditions, statement, afterStatement);
+            LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
+            currentToken--;
+            parseFunctionBody();
+            LLVMManager::llvmBytecodeBuilder->CreateBr(afterStatement);
+            LLVMManager::llvmBytecodeBuilder->SetInsertPoint(afterStatement);
+            previousStatementSucceeded = bothConditions;
+        }
+    }
+
+    void Parser::parseElseStatement(llvm::Value*& previousStatementSucceeded) {
+        Function *function = &Function::functionMap[currentFuncName];
+        auto statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "else-statement",
+                                                  function->llvmFunction);
+        auto afterStatement =
+                llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-else-statement",
+                                         function->llvmFunction);
+        //Check if all previous statements were false.
+        auto againstPreviousComp =
+                LLVMManager::llvmBytecodeBuilder->CreateICmpNE(previousStatementSucceeded,
+                                                               llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL),
+                                                                                      llvm::APInt(1, 1)));
+        LLVMManager::llvmBytecodeBuilder->CreateCondBr(againstPreviousComp, statement, afterStatement);
+        LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
+        parseFunctionBody();
+        LLVMManager::llvmBytecodeBuilder->CreateBr(afterStatement);
+        LLVMManager::llvmBytecodeBuilder->SetInsertPoint(afterStatement);
     }
 }
