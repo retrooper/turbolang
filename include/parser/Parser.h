@@ -58,8 +58,8 @@ namespace turbolang {
 
         static void parseIfStatement();
 
-        static void parseElifStatement(llvm::Value*& previousStatementSucceeded);
+        static void parseElifStatement(llvm::BasicBlock*& endBlock);
 
-        static void parseElseStatement(llvm::Value*& previousStatementSucceeded);
+        static void parseElseStatement(llvm::BasicBlock*& endBlock);
     };
 }

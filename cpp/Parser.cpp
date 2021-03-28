@@ -681,24 +681,27 @@ namespace turbolang {
                     llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-if-statement",
                                              function->llvmFunction);
 
+            llvm::BasicBlock* endBlock = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "statement-end-block", function->llvmFunction);
+
+
             auto comp = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue, llvm::ConstantInt::get(
                     Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
             LLVMManager::llvmBytecodeBuilder->CreateCondBr(comp, statement, afterStatement);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
             currentToken--;
             parseFunctionBody();
-            LLVMManager::llvmBytecodeBuilder->CreateBr(afterStatement);
+            LLVMManager::llvmBytecodeBuilder->CreateCondBr(comp, endBlock, afterStatement);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(afterStatement);
             auto beforeCheck = currentToken;
             while (true) {
                 auto elseIfToken = expectTokenType(TOKEN_TYPE_ELSE_IF);
                 if (elseIfToken.has_value()) {
-                    parseElifStatement(comp);
+                    parseElifStatement(endBlock);
                     beforeCheck = currentToken;
                     //Check if an else statement exists...
                     auto elseToken = expectTokenType(TOKEN_TYPE_ELSE);
                     if (elseToken.has_value()) {
-                        parseElseStatement(comp);
+                        parseElseStatement(endBlock);
                         break;
                     } else {
                         //No else statement, we are done...
@@ -710,7 +713,7 @@ namespace turbolang {
                     //Check if an else statement exists...
                     auto elseToken = expectTokenType(TOKEN_TYPE_ELSE);
                     if (elseToken.has_value()) {
-                        parseElseStatement(comp);
+                        parseElseStatement(endBlock);
                     } else {
                         //No else statement, we are done...
                         currentToken = beforeCheck;
@@ -718,17 +721,18 @@ namespace turbolang {
                     break;
                 }
             }
+            LLVMManager::llvmBytecodeBuilder->CreateBr(endBlock);
+            LLVMManager::llvmBytecodeBuilder->SetInsertPoint(endBlock);
         }
     }
 
-    void Parser::parseElifStatement(llvm::Value*& previousStatementSucceeded) {
+    void Parser::parseElifStatement(llvm::BasicBlock*& endBlock) {
         Function *function = &Function::functionMap[currentFuncName];
         auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
         if (openingParenthesis.has_value()) {
             auto extraProcessing = [](std::vector<Token> &tokens) {
                 tokens.pop_back();
             };
-            //Check if the previous statement is untrue.
             auto statementValue = expectExpression(nullptr, "{", extraProcessing);
             auto statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "elif-statement",
                                                       function->llvmFunction);
@@ -737,35 +741,22 @@ namespace turbolang {
                                              function->llvmFunction);
             auto localCondition = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue, llvm::ConstantInt::get(
                     Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
-            auto againstPreviousComp =  LLVMManager::llvmBytecodeBuilder->CreateICmpNE(previousStatementSucceeded, llvm::ConstantInt::get(
-                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
-            auto bothConditions = LLVMManager::llvmBytecodeBuilder->CreateAnd(localCondition, againstPreviousComp);
-            LLVMManager::llvmBytecodeBuilder->CreateCondBr(bothConditions, statement, afterStatement);
+            LLVMManager::llvmBytecodeBuilder->CreateCondBr(localCondition, statement, afterStatement);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
             currentToken--;
             parseFunctionBody();
-            LLVMManager::llvmBytecodeBuilder->CreateBr(afterStatement);
+            LLVMManager::llvmBytecodeBuilder->CreateCondBr(localCondition, endBlock, afterStatement);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(afterStatement);
-            previousStatementSucceeded = bothConditions;
         }
     }
 
-    void Parser::parseElseStatement(llvm::Value*& previousStatementSucceeded) {
+    void Parser::parseElseStatement(llvm::BasicBlock*& endBlock) {
         Function *function = &Function::functionMap[currentFuncName];
         auto statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "else-statement",
                                                   function->llvmFunction);
-        auto afterStatement =
-                llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-else-statement",
-                                         function->llvmFunction);
-        //Check if all previous statements were false.
-        auto againstPreviousComp =
-                LLVMManager::llvmBytecodeBuilder->CreateICmpNE(previousStatementSucceeded,
-                                                               llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL),
-                                                                                      llvm::APInt(1, 1)));
-        LLVMManager::llvmBytecodeBuilder->CreateCondBr(againstPreviousComp, statement, afterStatement);
+        LLVMManager::llvmBytecodeBuilder->CreateBr(statement);
         LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
         parseFunctionBody();
-        LLVMManager::llvmBytecodeBuilder->CreateBr(afterStatement);
-        LLVMManager::llvmBytecodeBuilder->SetInsertPoint(afterStatement);
+        LLVMManager::llvmBytecodeBuilder->CreateBr(endBlock);
     }
 }

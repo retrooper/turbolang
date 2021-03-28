@@ -1,4 +1,3 @@
-import "math"
 import "io"
 i32 main() {
     #FIX MATH EXPRESSION FALSES FOR NEGATIVE NUMBERS
@@ -6,13 +5,13 @@ i32 main() {
     if (value == 1) {
         println("Yes");
     }
-    elif (value == 10) {
+    elif (value == 2) {
         println("Yes2");
     }
-    elif (value == 0) {
+    elif (value == 3) {
         println("Yes3");
     }
-    elif (value == 3) {
+    elif (value == 4) {
         println("Yes4");
     }
     else {
