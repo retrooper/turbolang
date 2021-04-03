@@ -23,14 +23,14 @@ namespace turbolang {
             s += a.text + " ";
         }
         llvm::outs() << "Expr: " << s << "\n";
-        std::stack<llvm::Value *> numberStack;
+        std::deque<llvm::Value *> numberQueue;
         std::stack<std::string> operatorStack;
         for (const Token &token : tokens) {
             if (token.type == TOKEN_TYPE_INTEGER_LITERAL) {
-                numberStack.push(llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_INT),
+                numberQueue.push_back(llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_INT),
                                                         llvm::APInt(32, std::stoi(token.text))));
             } else if (token.type == TOKEN_TYPE_DOUBLE_LITERAL) {
-                numberStack.push(llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_DOUBLE), std::stod(token.text)));
+                numberQueue.push_back(llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_DOUBLE), std::stod(token.text)));
             } else if (token.type == TOKEN_TYPE_IDENTIFIER) {
                 llvm::Value *variableValue;
                 if (token.text == "true") {
@@ -40,55 +40,56 @@ namespace turbolang {
                 } else {
                     variableValue = currentFunction.getValue(token.text);
                 }
-                numberStack.push(variableValue);
+                numberQueue.push_back(variableValue);
             } else if (token.text == "(") {
                 operatorStack.push(token.text);
             } else if (isOperator(token)) {
+                llvm::outs() << token.text << " is an operator" << "\n";
                 while (!operatorStack.empty() &&
                        operatorPrecedenceMap[operatorStack.top()] >= operatorPrecedenceMap[token.text]) {
-                    llvm::Value *val2 = numberStack.top();
-                    numberStack.pop();
+                    llvm::Value *val2 = numberQueue.front();
+                    numberQueue.pop_front();
 
-                    llvm::Value *val1 = numberStack.top();
-                    numberStack.pop();
+                    llvm::Value *val1 = numberQueue.front();
+                    numberQueue.pop_front();
 
                     std::string operatorType = operatorStack.top();
                     operatorStack.pop();
 
-                    numberStack.push(calculate(val1, val2, operatorType));
+                    numberQueue.push_back(calculate(val1, val2, operatorType));
                 }
 
                 operatorStack.push(token.text);
             } else if (token.text == ")") {
                 while (!operatorStack.empty() && operatorStack.top() != "(") {
-                    llvm::Value *val2 = numberStack.top();
-                    numberStack.pop();
+                    llvm::Value *val2 = numberQueue.front();
+                    numberQueue.pop_front();
 
-                    llvm::Value *val1 = numberStack.top();
-                    numberStack.pop();
+                    llvm::Value *val1 = numberQueue.front();
+                    numberQueue.pop_front();
 
                     std::string operatorType = operatorStack.top();
                     operatorStack.pop();
 
-                    numberStack.push(calculate(val1, val2, operatorType));
+                    numberQueue.push_back(calculate(val1, val2, operatorType));
                 }
                 operatorStack.pop();
             }
         }
 
         while (!operatorStack.empty()) {
-            llvm::Value *val2 = numberStack.top();
-            numberStack.pop();
+            llvm::Value *val2 = numberQueue.front();
+            numberQueue.pop_front();
 
-            llvm::Value *val1 = numberStack.top();
-            numberStack.pop();
+            llvm::Value *val1 = numberQueue.front();
+            numberQueue.pop_front();
 
             std::string operatorType = operatorStack.top();
             operatorStack.pop();
 
-            numberStack.push(calculate(val1, val2, operatorType));
+            numberQueue.push_back(calculate(val1, val2, operatorType));
         }
-        return numberStack.top();
+        return numberQueue.front();
     }
 
     llvm::Value *MathEvaluator::calculate(llvm::Value *a, llvm::Value *b, const std::string &operatorType) {
