@@ -178,6 +178,8 @@ namespace turbolang {
             if (token->type == TOKEN_TYPE_IDENTIFIER) {
                 if (token->text == "while") {
                     token->type = TOKEN_TYPE_WHILE;
+                } else if (token->text == "class") {
+                    token->type = TOKEN_TYPE_CLASS;
                 } else if (token->text == "return") {
                     token->type = TOKEN_TYPE_RETURN;
                 } else if (token->text == "if") {
@@ -186,6 +188,12 @@ namespace turbolang {
                     token->type = TOKEN_TYPE_ELSE_IF;
                 } else if (token->text == "else") {
                     token->type = TOKEN_TYPE_ELSE;
+                }
+                else if (token->text == "declare") {
+                    token->type = TOKEN_TYPE_DECLARE;
+                }
+                else if (token->text == "import") {
+                    token->type = TOKEN_TYPE_IMPORT;
                 }
             }
             tokens->push_back(*token);

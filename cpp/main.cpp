@@ -2,6 +2,7 @@
 #include "utils/Compiler.h"
 #include "utils/llvm/LLVMManager.h"
 #include "token/Tokenizer.h"
+#include "builder/Builder.h"
 #include "parser/Parser.h"
 #include "utils/SourceCodeReader.h"
 #include <iostream>
@@ -28,18 +29,13 @@ void run() {
     std::cout << "TurboLang took " << (end - start)
               << " nanoseconds to parse the tokens!" << std::endl;
     start = getCurrentNanoTime();
-    Compiler::generate_byte_code();
+    Compiler::generateBytecode();
     LLVMManager::destroy();
     end = getCurrentNanoTime();
     std::cout << "TurboLang took " << (end - start) << " nanoseconds to generate bytecode!"
               << std::endl;
     start = getCurrentNanoTime();
-    Compiler::generate_binary();
-    end = getCurrentNanoTime();
-    std::cout << "Clang took " << (end - start)
-              << " nanoseconds to compile the bytecode(convert into machine code)." << std::endl;
-    start = getCurrentNanoTime();
-    Compiler::generate_executables();
+    Builder::buildExecutables();
     end = getCurrentNanoTime();
     std::cout << "Clang took " << (end - start) << " nanoseconds to build the executables for all platforms."
               << std::endl;
@@ -47,8 +43,8 @@ void run() {
     auto sleepTime = std::chrono::seconds(5);
     std::this_thread::sleep_for(sleepTime);
     std::cout << std::endl;
-    Compiler::execute_binary();
-    std::cout << std::endl;
+    //Execute the generated binary
+    std::system("./binary/output.out");
     std::cout << std::endl;
 }
 

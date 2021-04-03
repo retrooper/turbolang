@@ -8,21 +8,19 @@ namespace turbolang {
     void Parser::parse(std::vector<Token> &tokens) {
         endToken = tokens.end();
         currentToken = tokens.begin();
-        if (currentToken->type == TOKEN_TYPE_IDENTIFIER && currentToken->text == "import") {
+        if (currentToken->type == TOKEN_TYPE_IMPORT) {
             parseImportStatement();
         }
         //MAIN FUNCTION
         while (currentToken != endToken) {
-            if (currentToken->type == TOKEN_TYPE_IDENTIFIER) {
-                if (currentToken->text == "declare") {
-                    currentToken++;
-                    parseFunctionDeclareStatement();
-                    continue;
-                } else if (currentToken->text == "class") {
-                    currentToken++;
-                    parseClassDefinition();
-                    continue;
-                }
+            if (currentToken->type == TOKEN_TYPE_DECLARE) {
+                currentToken++;
+                parseFunctionDeclareStatement();
+                continue;
+            } else if (currentToken->type == TOKEN_TYPE_CLASS) {
+                currentToken++;
+                parseClassDefinition();
+                continue;
             }
             if (expectFunctionDefinition()) {
 
@@ -34,12 +32,39 @@ namespace turbolang {
     }
 
     void Parser::parseClassDefinition() {
+        //Check for the class name
         auto nextToken = expectTokenType(TOKEN_TYPE_IDENTIFIER);
         if (nextToken.has_value()) {
-            std::string className = nextToken.value().text;
-            std::cout << "CLASS NAME: " << className << std::endl;
-            parseFunctionBody();
-            exit(0);
+            Class cls;
+            cls.name = nextToken.value().text;
+            //TODO set some insert point or sth
+            std::cout << "CLASS NAME: " << cls.name << std::endl;
+
+            //Check for the class scope entry
+            auto scopeEntry = expectTokenType(TOKEN_TYPE_OPERATOR, "{");
+            if (scopeEntry.has_value()) {
+                while (!expectTokenType(TOKEN_TYPE_OPERATOR, "}").has_value()) {
+                    if (expectFunctionDefinition()) {
+                        std::cout << "how? " << std::endl;
+                    } else {
+                        //Variable declaration
+                        auto dataType = expectTokenDataType();
+                        if (dataType.has_value()) {
+                            parseVariableDeclaration(dataType.value(), cls.name);
+                            std::cout << "oo" << std::endl;
+                        }
+                        else {
+                            currentToken--;
+                            throw std::runtime_error("Unexpected token " + expectToken().value().text + " in the definition of the class " + cls.name);
+                        }
+                    }
+                }
+            } else {
+                throw std::runtime_error("Could not find " + cls.name + "'s class scope!");
+            }
+        }
+        else {
+            throw std::runtime_error("Invalid class name: " + nextToken.value().text);
         }
     }
 
@@ -124,7 +149,7 @@ namespace turbolang {
         std::vector<std::string> importedModules;
         bool importPending = false;
         while (true) {
-            auto nextToken = expectTokenType(TOKEN_TYPE_IDENTIFIER, "import");
+            auto nextToken = expectTokenType(TOKEN_TYPE_IMPORT);
             if (nextToken.has_value()) {
                 importPending = true;
             } else {
@@ -225,18 +250,7 @@ namespace turbolang {
         return *returnToken;
     }
 
-    std::optional<DataType> Parser::expectTokenVariableType() {
-        std::optional<Token> identifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
-        if (identifier.has_value()) {
-            std::optional<DataType> optionalVarType = Type::getType(identifier.value().text);
-            if (optionalVarType.has_value() && optionalVarType.value() != DATA_TYPE_VOID) {
-                return optionalVarType.value();
-            }
-        }
-        return std::nullopt;
-    }
-
-    std::optional<DataType> Parser::expectTokenFunctionType() {
+    std::optional<DataType> Parser::expectTokenDataType() {
         std::optional<Token> identifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
         if (identifier.has_value()) {
             std::optional<DataType> optionalFuncType = Type::getType(identifier.value().text);
@@ -250,11 +264,18 @@ namespace turbolang {
     bool Parser::expectFunctionDefinition() {
         auto parseStart = currentToken;
         //Function return type
-        auto returnType = expectTokenFunctionType();
+        auto returnType = expectTokenDataType();
         if (returnType.has_value()) {
             //Function name
             auto functionName = expectTokenType(TOKEN_TYPE_IDENTIFIER);
             if (functionName.has_value()) {
+                auto prevCurToken = currentToken;
+                bool isAFunction = expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value() || expectTokenType(TOKEN_TYPE_OPERATOR, "()").has_value();
+                if (!isAFunction) {
+                    currentToken = parseStart;
+                    return false;
+                }
+                currentToken = prevCurToken;
                 //Opening parenthesis for the function arguments
                 bool hasArguments = !expectTokenType(TOKEN_TYPE_OPERATOR, "()").has_value();
                 if (hasArguments) {
@@ -310,12 +331,9 @@ namespace turbolang {
                     LLVMManager::llvmBytecodeBuilder->CreateRet(nullptr);
                 }
                 return true;
-            } else {
-                currentToken = parseStart;
             }
-        } else {
-            currentToken = parseStart;
         }
+        currentToken = parseStart;
         return false;
     }
 
@@ -369,7 +387,7 @@ namespace turbolang {
                     if (Type::getType(
                             token.value().text).has_value()) { //TODO support custom classes as types, support strings
                         //Then a variable is for sure being declared/created.
-                        parseVariableDeclaration(token.value());
+                        parseVariableDeclaration(Type::getType(token.value().text));
                     } else {
                         //Is the next token an operator?
                         auto operatorToken = expectTokenType(TOKEN_TYPE_OPERATOR);
@@ -410,13 +428,11 @@ namespace turbolang {
         }
     }
 
-    void Parser::parseVariableDeclaration(const Token &typeToken) {
+    void Parser::parseVariableDeclaration(const std::optional<DataType> &varType, const std::string &className) {
         //Is the declared variable an array.
         bool isArray = false;
         //If the variable is an array, we will store its size in this variable.
         int arraySize;
-        //What type of variable is it?
-        auto varType = Type::getType(typeToken.text);
         if (varType.has_value()) {
             //We will store the variable name.
             std::string varName;
@@ -453,8 +469,12 @@ namespace turbolang {
                                                                                 llvm::Twine(
                                                                                         varName));
                 }
-                Function::functionMap[currentFuncName].setAllocaInst(
-                        varName, allocaInst);
+                if (!className.empty()) {
+                    Class::classMap[className].setValue(varName, allocaInst);
+                } else {
+                    Function::functionMap[currentFuncName].setAllocaInst(
+                            varName, allocaInst);
+                }
 
                 auto equalsOperator = expectTokenType(TOKEN_TYPE_OPERATOR, "=");
                 //bool signedType = typeToken.text.find('u') != 0;
@@ -681,7 +701,8 @@ namespace turbolang {
                     llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-if-statement",
                                              function->llvmFunction);
 
-            llvm::BasicBlock* endBlock = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "statement-end-block", function->llvmFunction);
+            llvm::BasicBlock *endBlock = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "statement-end-block",
+                                                                  function->llvmFunction);
 
 
             auto comp = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue, llvm::ConstantInt::get(
@@ -726,7 +747,7 @@ namespace turbolang {
         }
     }
 
-    void Parser::parseElifStatement(llvm::BasicBlock*& endBlock) {
+    void Parser::parseElifStatement(llvm::BasicBlock *&endBlock) {
         Function *function = &Function::functionMap[currentFuncName];
         auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
         if (openingParenthesis.has_value()) {
@@ -750,7 +771,7 @@ namespace turbolang {
         }
     }
 
-    void Parser::parseElseStatement(llvm::BasicBlock*& endBlock) {
+    void Parser::parseElseStatement(llvm::BasicBlock *&endBlock) {
         Function *function = &Function::functionMap[currentFuncName];
         auto statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "else-statement",
                                                   function->llvmFunction);

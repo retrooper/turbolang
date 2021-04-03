@@ -9,6 +9,9 @@ namespace turbolang {
     static const char *TOKEN_TYPE_STRINGS[] = {
             "TOKEN_TYPE_WHITESPACE",
             "TOKEN_TYPE_IDENTIFIER",
+            "TOKEN_TYPE_CLASS",
+            "TOKEN_TYPE_DECLARE",
+            "TOKEN_TYPE_IMPORT",
             "TOKEN_TYPE_RETURN",
             "TOKEN_TYPE_WHILE",
             "TOKEN_TYPE_IF",

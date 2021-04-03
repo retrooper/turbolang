@@ -17,13 +17,7 @@ namespace turbolang {
     public:
         static volatile int tasksFinished;
 
-        static void generate_byte_code();
-
-        static void generate_binary();
-
-        static void generate_executables();
-
-        static void execute_binary();
+        static void generateBytecode();
     };
 
 }

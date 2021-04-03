@@ -3,6 +3,7 @@
 #include "token/Tokenizer.h"
 #include "function/FunctionCallProcessor.h"
 #include "function/Function.h"
+#include "class/Class.h"
 #include "utils/Compiler.h"
 #include "utils/Type.h"
 #include "utils/DataType.h"
@@ -31,9 +32,7 @@ namespace turbolang {
 
         static std::optional<Token> expectToken();
 
-        static std::optional<DataType> expectTokenVariableType();
-
-        static std::optional<DataType> expectTokenFunctionType();
+        static std::optional<DataType> expectTokenDataType();
 
         static llvm::Value* expectExpression(const Token* token = nullptr, const std::string& endAtStr = ";",
                                              const std::function<void(std::vector<Token>&)>& extraProcessing = [](std::vector<Token>& tokens){});
@@ -46,7 +45,7 @@ namespace turbolang {
 
         static void parseClassDefinition();
 
-        static void parseVariableDeclaration(const Token &typeToken);
+        static void parseVariableDeclaration(const std::optional<DataType>& varType, const std::string& className= "");
 
         static void parseVariableModification(const std::optional<Token> &variableName);
 
