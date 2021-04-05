@@ -1,12 +1,15 @@
 import "io"
 
-#class IData {
-#    i32 value;
-#}
+class Test {
+    i32 a;
+    i32 b;
+}
+
 
 i32 main() {
-
-    i32 i = -30 - -30;
-    printf("Value: %i\n", i);
+    Test test;
+    test.a = 100;
+    test.b = 200;
     return 0;
 }
+

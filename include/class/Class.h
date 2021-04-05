@@ -3,19 +3,23 @@
 #include "function/Function.h"
 #include <string>
 namespace turbolang {
+    struct ClassMemberData {
+        llvm::Type* type;
+        std::string name;
+    };
     class Class {
         friend class Parser;
+        friend class Type;
+        friend class Function;
     public:
+        Class() = default;
+        explicit Class(const std::string& name);
         std::string name;
-        void setAllocaInst(const std::string& name, llvm::AllocaInst* allocaInst);
-        llvm::AllocaInst* getAllocaInst(const std::string& name);
-        llvm::Value* getValue(const std::string& name);
-        void setValue(const std::string& name, llvm::Value* value);
-        std::map<std::string, Function> functions;
         static std::map<std::string, Class> classMap;
         void create();
+        unsigned int getMemberIndex(const std::string& memberName);
     private:
         llvm::StructType* structType;
-        std::map<std::string, llvm::AllocaInst*> allocaMap;
+        std::vector<ClassMemberData> clsMemberData;
     };
 }

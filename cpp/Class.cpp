@@ -1,27 +1,23 @@
 #include "class/Class.h"
 namespace turbolang {
     std::map<std::string, Class> Class::classMap;
-    void Class::setAllocaInst(const std::string &name, llvm::AllocaInst *allocaInst) {
-        allocaMap[name] = allocaInst;
-    }
-
-    llvm::AllocaInst *Class::getAllocaInst(const std::string &name) {
-        return allocaMap[name];
-    }
-
-    llvm::Value *Class::getValue(const std::string &name) {
-        llvm::AllocaInst *allocaInst = getAllocaInst(name);
-        llvm::LoadInst *loadInst = LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst, name);
-        return loadInst;
-    }
-
-    void Class::setValue(const std::string &name, llvm::Value *value) {
-        llvm::AllocaInst *allocaInst = getAllocaInst(name);
-        llvm::StoreInst *storeInst = LLVMManager::llvmBytecodeBuilder->CreateStore(value, allocaInst, false);
+    Class::Class(const std::string &name) {
+        this->name = name;
+        this->structType = nullptr;
     }
 
     void Class::create() {
-        structType = llvm::StructType::create(*LLVMManager::llvmCtx);
-        structType->setName(name);
+        structType = llvm::StructType::create(*LLVMManager::llvmCtx, name);
+    }
+
+    unsigned int Class::getMemberIndex(const std::string &memberName) {
+        int index = 0;
+        for (const auto& member : clsMemberData) {
+            if (member.name == memberName) {
+                return index;
+            }
+            index++;
+        }
+        return -1;
     }
 }

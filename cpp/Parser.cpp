@@ -23,7 +23,7 @@ namespace turbolang {
                 continue;
             }
             if (expectFunctionDefinition()) {
-
+                std::cout << "reee" << std::endl;
             } else {
                 std::cerr << "Unknown identifier " << currentToken->text << std::endl;
                 currentToken++;
@@ -35,35 +35,46 @@ namespace turbolang {
         //Check for the class name
         auto nextToken = expectTokenType(TOKEN_TYPE_IDENTIFIER);
         if (nextToken.has_value()) {
-            Class cls;
-            cls.name = nextToken.value().text;
-            //TODO set some insert point or sth
-            std::cout << "CLASS NAME: " << cls.name << std::endl;
-
+            Class clazz(nextToken.value().text);
+            clazz.create();
+            std::cout << "CLASS NAME: " << clazz.name << std::endl;
+            std::vector<llvm::Type *> members;
             //Check for the class scope entry
             auto scopeEntry = expectTokenType(TOKEN_TYPE_OPERATOR, "{");
             if (scopeEntry.has_value()) {
                 while (!expectTokenType(TOKEN_TYPE_OPERATOR, "}").has_value()) {
-                    if (expectFunctionDefinition()) {
-                        std::cout << "how? " << std::endl;
+                    //Variable declaration
+                    auto dataTypeIdentifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+                    if (dataTypeIdentifier.has_value()) {
+                        auto dataType = Type::getType(dataTypeIdentifier.value().text);
+                        auto variableName = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+                        if (variableName.has_value()) {
+                            if (expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
+                                ClassMemberData clsMemberData;
+                                clsMemberData.name = variableName.value().text;
+                                clsMemberData.type = Type::getLLVMType(dataType.value(),
+                                                                       dataType.value() == DATA_TYPE_CLASS
+                                                                       ? dataTypeIdentifier.value().text : "");
+                                clazz.clsMemberData.push_back(clsMemberData);
+                                members.push_back(clsMemberData.type);
+                            } else {
+                                throw std::runtime_error(
+                                        &"Expected semicolon after variable declaration inside a class. Line: "[currentToken->lineNumber]);
+                            }
+                        }
                     } else {
-                        //Variable declaration
-                        auto dataType = expectTokenDataType();
-                        if (dataType.has_value()) {
-                            parseVariableDeclaration(dataType.value(), cls.name);
-                            std::cout << "oo" << std::endl;
-                        }
-                        else {
-                            currentToken--;
-                            throw std::runtime_error("Unexpected token " + expectToken().value().text + " in the definition of the class " + cls.name);
-                        }
+                        currentToken--;
+                        throw std::runtime_error("Unexpected token " + expectToken().value().text +
+                                                 " in the definition of the class " + clazz.name);
                     }
                 }
+
+                clazz.structType->setBody(members);
+                Class::classMap[clazz.name] = clazz;
             } else {
-                throw std::runtime_error("Could not find " + cls.name + "'s class scope!");
+                throw std::runtime_error("Could not find " + clazz.name + "'s class scope!");
             }
-        }
-        else {
+        } else {
             throw std::runtime_error("Invalid class name: " + nextToken.value().text);
         }
     }
@@ -218,6 +229,13 @@ namespace turbolang {
             }
         }
         extraProcessing(expressionTokens);
+
+        if (expressionTokens.size() == 3 && expressionTokens[1].text == ".") {
+            std::cout << "ree: " << expressionTokens[0].text + "." + expressionTokens[2].text << std::endl;
+            return Function::functionMap[currentFuncName].getValue(
+                    expressionTokens[0].text + "." + expressionTokens[2].text);
+        }
+
         return MathEvaluator::eval(expressionTokens, Function::functionMap[currentFuncName]);
     }
 
@@ -264,75 +282,82 @@ namespace turbolang {
     bool Parser::expectFunctionDefinition() {
         auto parseStart = currentToken;
         //Function return type
-        auto returnType = expectTokenDataType();
-        if (returnType.has_value()) {
-            //Function name
-            auto functionName = expectTokenType(TOKEN_TYPE_IDENTIFIER);
-            if (functionName.has_value()) {
-                auto prevCurToken = currentToken;
-                bool isAFunction = expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value() || expectTokenType(TOKEN_TYPE_OPERATOR, "()").has_value();
-                if (!isAFunction) {
-                    currentToken = parseStart;
-                    return false;
-                }
-                currentToken = prevCurToken;
-                //Opening parenthesis for the function arguments
-                bool hasArguments = !expectTokenType(TOKEN_TYPE_OPERATOR, "()").has_value();
-                if (hasArguments) {
-                    currentToken++;
-                }
-                Function function(functionName.value().text, returnType.value());
-                while (hasArguments && !expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
-                    auto parameterType = expectToken();
-                    if (!parameterType.has_value()) {
-                        throw std::runtime_error("Expected a type at the start of the parameter list!");
+        std::optional<Token> returnTypeIdentifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+        if (returnTypeIdentifier.has_value()) {
+            std::optional<DataType> optionalFuncType = Type::getType(returnTypeIdentifier.value().text);
+            if (optionalFuncType.has_value()) {
+                auto returnType = optionalFuncType.value();
+                //Function name
+                auto functionName = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+                if (functionName.has_value()) {
+                    auto prevCurToken = currentToken;
+                    bool isAFunction = expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value() ||
+                                       expectTokenType(TOKEN_TYPE_OPERATOR, "()").has_value();
+                    if (!isAFunction) {
+                        currentToken = parseStart;
+                        return false;
                     }
-                    //Function parameter
-                    FunctionArgument functionArgument;
-                    //Parameter type
-                    auto varType = Type::getType(parameterType.value().text);
-                    if (varType.has_value()) {
-                        functionArgument.type = varType.value();
+                    currentToken = prevCurToken;
+                    //Opening parenthesis for the function arguments
+                    bool hasArguments = !expectTokenType(TOKEN_TYPE_OPERATOR, "()").has_value();
+                    if (hasArguments) {
+                        currentToken++;
                     }
-                    //Parameter name
-                    auto variableName = expectTokenType(TOKEN_TYPE_IDENTIFIER);
-                    if (variableName.has_value()) {
-                        functionArgument.name = variableName.value().text;
-                    }
-                    function.arguments.push_back(functionArgument);
+                    Function function(functionName.value().text, returnType,
+                                      returnType == DATA_TYPE_CLASS ? returnTypeIdentifier.value().text : "");
+                    while (hasArguments && !expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
+                        auto parameterType = expectToken();
+                        if (!parameterType.has_value()) {
+                            throw std::runtime_error("Expected a type at the start of the parameter list!");
+                        }
+                        //Function parameter
+                        FunctionArgument functionArgument;
+                        //Parameter type
+                        auto varType = Type::getType(parameterType.value().text);
+                        if (varType.has_value()) {
+                            functionArgument.type = varType.value();
+                        }
+                        //Parameter name
+                        auto variableName = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+                        if (variableName.has_value()) {
+                            functionArgument.name = variableName.value().text;
+                        }
+                        function.arguments.push_back(functionArgument);
 
-                    //Check if we reached the end.
-                    if (expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
-                        break;
-                    }
+                        //Check if we reached the end.
+                        if (expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
+                            break;
+                        }
 
-                    //Check if they separated the arguments with a comma.
-                    if (!expectTokenType(TOKEN_TYPE_OPERATOR, ",").has_value()) {
-                        throw std::runtime_error(
-                                "Expected ',' to separate parameters or ')' to end the parameter list!");
+                        //Check if they separated the arguments with a comma.
+                        if (!expectTokenType(TOKEN_TYPE_OPERATOR, ",").has_value()) {
+                            throw std::runtime_error(
+                                    "Expected ',' to separate parameters or ')' to end the parameter list!");
+                        }
                     }
-                }
-                //Create the function.
-                function.create();
+                    //Create the function.
+                    function.create();
 
-                //Store the function in the map for fast access by name.
-                Function::functionMap[function.name] = function;
-                currentFuncName = function.name;
-                try {
-                    //Parse the functions body.
-                    parseFunctionBody();
+                    //Store the function in the map for fast access by name.
+                    Function::functionMap[function.name] = function;
+                    currentFuncName = function.name;
+                    try {
+                        //Parse the functions body.
+                        parseFunctionBody();
+                    }
+                    catch (std::exception &ex) {
+                        ex.what();
+                        currentToken = parseStart;
+                        return false;
+                    }
+                    if (function.type == DATA_TYPE_VOID) {
+                        LLVMManager::llvmBytecodeBuilder->CreateRet(nullptr);
+                    }
+                    return true;
                 }
-                catch (std::exception &ex) {
-                    ex.what();
-                    currentToken = parseStart;
-                    return false;
-                }
-                if (function.type == DATA_TYPE_VOID) {
-                    LLVMManager::llvmBytecodeBuilder->CreateRet(nullptr);
-                }
-                return true;
             }
         }
+
         currentToken = parseStart;
         return false;
     }
@@ -387,7 +412,9 @@ namespace turbolang {
                     if (Type::getType(
                             token.value().text).has_value()) { //TODO support custom classes as types, support strings
                         //Then a variable is for sure being declared/created.
-                        parseVariableDeclaration(Type::getType(token.value().text));
+                        parseVariableDeclaration(Type::getType(token.value().text),
+                                                 Type::getType(token.value().text) == DATA_TYPE_CLASS
+                                                 ? token.value().text : "");
                     } else {
                         //Is the next token an operator?
                         auto operatorToken = expectTokenType(TOKEN_TYPE_OPERATOR);
@@ -403,17 +430,29 @@ namespace turbolang {
                                     throw std::runtime_error(
                                             &"Expected a semicolon at line "[currentToken->lineNumber]);
                                 }
+                            } else if (operatorToken.value().text == ".") {
+                                std::string name = token.value().text + ".";
+                                while (true) {
+                                    auto nextToken = expectToken();
+                                    if (nextToken.has_value() && nextToken.value().type == TOKEN_TYPE_OPERATOR &&
+                                        nextToken.value().text == "=") {
+                                        break;
+                                    }
+                                    name += nextToken.value().text;
+                                }
+                                Token tkn{};
+                                tkn.lineNumber = currentToken->lineNumber;
+                                tkn.text = name;
+                                tkn.type = TOKEN_TYPE_IDENTIFIER;
+                                parseVariableModification(tkn);
                             } else {
                                 throw std::runtime_error(
                                         "Unexpected operator token. Expected an assignment operator or an opening parenthesis! Line: " +
                                         std::to_string(currentToken->lineNumber));
                             }
                         } else {
-                            throw std::runtime_error(
-                                    "Unexpected token. Expected an assignment operator or an opening parenthesis! Line: " +
-                                    std::to_string(currentToken->lineNumber));
+                            throw std::runtime_error(&"Unexpected token. Line: "[currentToken->lineNumber]);
                         }
-
                     }
                     break;
                 default:
@@ -424,7 +463,9 @@ namespace turbolang {
             }
         } else {
             throw std::runtime_error(
-                    "Failed to parse a statement. No token found? Line: " + std::to_string(currentToken->lineNumber));
+                    "Failed to parse a statement. No token found? Line: " +
+                    std::to_string(currentToken
+                                           ->lineNumber));
         }
     }
 
@@ -455,7 +496,7 @@ namespace turbolang {
                     varName = variableNameOrOpeningBracketToken.value().text;
                 }
 
-                llvm::Type *type = Type::getLLVMType(varType.value());
+                llvm::Type *type = Type::getLLVMType(varType.value(), className);
                 llvm::AllocaInst *allocaInst;
                 if (isArray) {
                     allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type,
@@ -469,12 +510,9 @@ namespace turbolang {
                                                                                 llvm::Twine(
                                                                                         varName));
                 }
-                if (!className.empty()) {
-                    Class::classMap[className].setValue(varName, allocaInst);
-                } else {
-                    Function::functionMap[currentFuncName].setAllocaInst(
-                            varName, allocaInst);
-                }
+                Function::functionMap[currentFuncName].setAllocaInst(
+                        varName, allocaInst);
+
 
                 auto equalsOperator = expectTokenType(TOKEN_TYPE_OPERATOR, "=");
                 //bool signedType = typeToken.text.find('u') != 0;
@@ -488,10 +526,11 @@ namespace turbolang {
                         allocatedValue = allocaInst->getOperand(0);
                     }
 
+                    std::cout << "store created for var: " << varName << std::endl;
                     Function::functionMap[currentFuncName].setValue(varName, allocatedValue);
                 }
 
-                if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
+                if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value() && className.empty()) {
                     throw std::runtime_error("Expected a semicolon!");
                 }
             }
@@ -557,41 +596,49 @@ namespace turbolang {
                         switch (functionArg.type) {
                             case DATA_TYPE_BYTE:
                                 llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
-                                                                              llvm::APInt(8, std::stoi(argument.text)));
+                                                                              llvm::APInt(8, std::stoi(
+                                                                                      argument.text)));
                                 break;
                             case DATA_TYPE_UBYTE:
                                 llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
-                                                                              llvm::APInt(8, std::stoi(argument.text)));
+                                                                              llvm::APInt(8, std::stoi(
+                                                                                      argument.text)));
                                 break;
                             case DATA_TYPE_SHORT:
                                 llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
                                                                               llvm::APInt(16,
-                                                                                          std::stoi(argument.text)));
+                                                                                          std::stoi(
+                                                                                                  argument.text)));
                                 break;
                             case DATA_TYPE_USHORT:
                                 llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
                                                                               llvm::APInt(16,
-                                                                                          std::stoi(argument.text)));
+                                                                                          std::stoi(
+                                                                                                  argument.text)));
                                 break;
                             case DATA_TYPE_INT:
                                 llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
                                                                               llvm::APInt(32,
-                                                                                          std::stoi(argument.text)));
+                                                                                          std::stoi(
+                                                                                                  argument.text)));
                                 break;
                             case DATA_TYPE_UINT:
                                 llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
                                                                               llvm::APInt(32,
-                                                                                          std::stoi(argument.text)));
+                                                                                          std::stoi(
+                                                                                                  argument.text)));
                                 break;
                             case DATA_TYPE_LONG:
                                 llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
                                                                               llvm::APInt(64,
-                                                                                          std::stoi(argument.text)));
+                                                                                          std::stoi(
+                                                                                                  argument.text)));
                                 break;
                             case DATA_TYPE_ULONG:
                                 llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
                                                                               llvm::APInt(64,
-                                                                                          std::stoi(argument.text)));
+                                                                                          std::stoi(
+                                                                                                  argument.text)));
                                 break;
                             default:
                                 //TODO throw exception
@@ -760,8 +807,11 @@ namespace turbolang {
             auto afterStatement =
                     llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-elif-statement",
                                              function->llvmFunction);
-            auto localCondition = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue, llvm::ConstantInt::get(
-                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
+            auto localCondition = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue,
+                                                                                 llvm::ConstantInt::get(
+                                                                                         Type::getLLVMType(
+                                                                                                 DATA_TYPE_BOOL),
+                                                                                         llvm::APInt(1, 1)));
             LLVMManager::llvmBytecodeBuilder->CreateCondBr(localCondition, statement, afterStatement);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
             currentToken--;
@@ -780,4 +830,5 @@ namespace turbolang {
         parseFunctionBody();
         LLVMManager::llvmBytecodeBuilder->CreateBr(endBlock);
     }
+
 }
