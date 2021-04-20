@@ -5,6 +5,7 @@
 namespace turbolang {
     struct ClassMemberData {
         llvm::Type* type;
+        bool isSigned;
         std::string name;
     };
     class Class {

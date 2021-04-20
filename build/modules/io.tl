@@ -1,13 +1,13 @@
-declare i32 scanf(i8_ptr, ...);
-declare i32 printf(i8_ptr, ...);
-declare i32 puts(i8_ptr);
-declare void fopen(i8_ptr, i8_ptr);
+declare i32 scanf(i8*, ...);
+declare i32 printf(i8*, ...);
+declare i32 puts(i8*);
+declare void fopen(i8*, i8*);
 declare i32 getchar();
 
-void createFile(i8_ptr name) {
+void createFile(i8* name) {
     fopen(name, "w+");
 }
 
-void println(i8_ptr message) {
+void println(i8* message) {
     puts(message);
 }

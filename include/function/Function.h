@@ -7,7 +7,9 @@
 namespace turbolang {
     struct FunctionArgument {
         std::string name;
+        std::string typeInfo;
         DataType type;
+        bool isPtr;
     };
 
     class Function {
@@ -26,10 +28,13 @@ namespace turbolang {
         void create();
         void setAllocaInst(const std::string& name, llvm::AllocaInst* allocaInst);
         llvm::AllocaInst* getAllocaInst(std::string name);
+        llvm::Type* getType(std::string name);
         llvm::Value* getValue(std::string name);
+        llvm::Value* getDereferencedValue(std::string name);
         void setValue(std::string name, llvm::Value* value);
+        void setDereferencedValue(std::string name, llvm::Value* value);
     private:
-        std::vector<std::string> split(std::string str, std::string delim);
+        std::vector<std::string> split(const std::string& str, const std::string& delim);
         std::map<std::string, llvm::AllocaInst*> allocaMap;
     };
 }

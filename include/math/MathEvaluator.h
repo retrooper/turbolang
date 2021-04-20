@@ -9,7 +9,7 @@ namespace turbolang {
     class MathEvaluator {
         friend class Tokenizer;
     public:
-        static llvm::Value* eval(const std::vector<Token>& tokens, Function& currentFunction);
+        static llvm::Value* eval(const std::vector<Token>& tokens, Function& currentFunction, const DataType& resultType);
     private:
         static std::map<std::string, int> operatorPrecedenceMap;
         static llvm::Value* calculate(llvm::Value* a, llvm::Value* b, const std::string& operatorType);

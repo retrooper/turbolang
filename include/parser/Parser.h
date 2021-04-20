@@ -32,9 +32,7 @@ namespace turbolang {
 
         static std::optional<Token> expectToken();
 
-        static std::optional<DataType> expectTokenDataType();
-
-        static llvm::Value* expectExpression(const Token* token = nullptr, const std::string& endAtStr = ";",
+        static llvm::Value* expectExpression(const DataType& resultType, const Token* token = nullptr, const std::string& endAtStr = ";",
                                              const std::function<void(std::vector<Token>&)>& extraProcessing = [](std::vector<Token>& tokens){});
 
         static void parseStatement();
@@ -45,9 +43,9 @@ namespace turbolang {
 
         static void parseClassDefinition();
 
-        static void parseVariableDeclaration(const std::optional<DataType>& varType, const std::string& className= "");
+        static void parseVariableDeclaration(const std::optional<DataType>& varType, bool isPointer, const std::string& className= "");
 
-        static void parseVariableModification(const std::optional<Token> &variableName);
+        static void parseVariableModification(const std::optional<Token> &variableName, bool isDereferencing);
 
         static llvm::Value *parseFunctionCall(const std::string &functionName);
 

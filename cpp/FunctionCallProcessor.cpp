@@ -7,7 +7,7 @@ namespace turbolang {
         if (llvmFunction == nullptr) {
             std::string msg = "Failed to find function: " + functionName;
             std::cerr << msg << std::endl;
-            throw std::runtime_error("");
+            std::exit(-1);
         }
         return LLVMManager::llvmBytecodeBuilder->CreateCall(llvmFunction, arguments);
     }

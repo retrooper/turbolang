@@ -1,15 +1,15 @@
+import "vector"
 import "io"
-
-class Test {
-    i32 a;
-    i32 b;
-}
-
-
 i32 main() {
-    Test test;
-    test.a = 100;
-    test.b = 200;
+    Vec3 vec;
+    vec.x = 10.0;
+    vec.y = 5.0;
+    vec.z = 10.0;
+    f64 x = getVecX(vec);
+    f64 y = getVecY(vec);
+    f64 z = getVecZ(vec);
+    i32 length = (10 * 10) + (10 * 10);
+    printf("Length: %d\n", length);
+    printf("X: %f, Y: %f, Z: %f\n", x, y, z);
     return 0;
 }
-
