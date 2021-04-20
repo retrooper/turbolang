@@ -17,6 +17,46 @@ namespace turbolang {
             {">=", 20}
     };
 
+    std::deque<Token>
+    MathEvaluator::shuntingYardAlgorithm(const std::vector<Token> &tokens) {
+        std::deque<Token> queue;
+        std::vector<Token> stack;
+        for (const Token &token : tokens) {
+            if (token.type == TOKEN_TYPE_INTEGER_LITERAL
+                || token.type == TOKEN_TYPE_DOUBLE_LITERAL
+                || token.type == TOKEN_TYPE_IDENTIFIER) {
+                queue.push_back(token);
+            } else if (token.text == "(") {
+                stack.push_back(token);
+            } else if (token.text == ")") {
+                bool match = false;
+                while (!stack.empty() && stack.back().text != "(") {
+                    queue.push_back(stack.back());
+                    stack.pop_back();
+                    match = true;
+                }
+                stack.pop_back();
+                if (!match && stack.empty()) {
+                    llvm::outs() << "Missing right parenthesis in math expression!\n";
+                    std::exit(-1);
+                }
+            } else if (isOperator(token)) {
+                const auto o1 = token;
+                while (!stack.empty()) {
+                    const auto o2 = stack.back();
+                    if (operatorPrecedenceMap[o1.text] <= operatorPrecedenceMap[o2.text]) {
+                        stack.pop_back();
+                        queue.push_back(o2);
+                        continue;
+                    }
+                    break;
+                }
+                stack.push_back(o1);
+            }
+        }
+        return queue;
+    }
+
     llvm::Value *
     MathEvaluator::eval(const std::vector<Token> &tokens, Function &currentFunction, const DataType &resultType) {
         std::string s;
@@ -31,76 +71,53 @@ namespace turbolang {
             llvm::outs() << s.substr(1) << " we got " << "\n";
             return currentFunction.getDereferencedValue(s.substr(1));
         }
-
-
-        std::deque<llvm::Value *> numberQueue;
-        std::stack<std::string> operatorStack;
-        for (const Token &token : tokens) {
-            if (token.type == TOKEN_TYPE_INTEGER_LITERAL) {
-                numberQueue.push_back(llvm::ConstantInt::get(
-                        Type::getLLVMType(resultType),
-                        llvm::APInt(32, std::stoi(token.text))));
-            } else if (token.type == TOKEN_TYPE_DOUBLE_LITERAL) {
-                numberQueue.push_back(llvm::ConstantFP::get(Type::getLLVMType(resultType), std::stod(token.text)));
-            } else if (token.type == TOKEN_TYPE_IDENTIFIER) {
-                llvm::Value *variableValue;
-                if (token.text == "true") {
-                    variableValue = llvm::ConstantInt::get(Type::getLLVMType(resultType), llvm::APInt(1, 1));
-                } else if (token.text == "false") {
-                    variableValue = llvm::ConstantInt::get(Type::getLLVMType(resultType), llvm::APInt(1, 0));
-                } else {
-                    variableValue = currentFunction.getValue(token.text);
+        std::deque<Token> queue = shuntingYardAlgorithm(tokens);
+        llvm::outs() << "size: " << queue.size() << "\n";
+        std::vector<llvm::Value*> stack;
+        while(!queue.empty()) {
+            const auto token = queue.front();
+            queue.pop_front();
+            switch(token.type) {
+                case TOKEN_TYPE_INTEGER_LITERAL:
+                    stack.push_back(llvm::ConstantInt::get(
+                            Type::getLLVMType(resultType),
+                            llvm::APInt(32, std::stoi(token.text))));//TODO change num bits and support other int types
+                    break;
+                case TOKEN_TYPE_DOUBLE_LITERAL:
+                    stack.push_back(llvm::ConstantFP::get(Type::getLLVMType(resultType), std::stod(token.text)));
+                    break;
+                case TOKEN_TYPE_IDENTIFIER: {
+                    llvm::Value *variableValue;
+                    if (token.text == "true") {
+                        variableValue = llvm::ConstantInt::get(Type::getLLVMType(resultType), llvm::APInt(1, 1));
+                    } else if (token.text == "false") {
+                        variableValue = llvm::ConstantInt::get(Type::getLLVMType(resultType), llvm::APInt(1, 0));
+                    } else {
+                        variableValue = currentFunction.getValue(token.text);
+                    }
+                    stack.push_back(variableValue);
+                    break;
                 }
-                numberQueue.push_back(variableValue);
-            } else if (token.text == "(") {
-                operatorStack.push(token.text);
-            } else if (isOperator(token)) {
-                while (!operatorStack.empty() &&
-                       operatorPrecedenceMap[operatorStack.top()] >= operatorPrecedenceMap[token.text]) {
-                    llvm::Value *val2 = numberQueue.front();
-                    numberQueue.pop_front();
-
-                    llvm::Value *val1 = numberQueue.front();
-                    numberQueue.pop_front();
-
-                    std::string operatorType = operatorStack.top();
-                    operatorStack.pop();
-                    numberQueue.push_back(calculate(val1, val2, operatorType));
-                }
-
-                operatorStack.push(token.text);
-            } else if (token.text == ")") {
-                while (!operatorStack.empty() && operatorStack.top() != "(") {
-                    llvm::Value *val2 = numberQueue.front();
-                    numberQueue.pop_front();
-
-                    llvm::Value *val1 = numberQueue.front();
-                    numberQueue.pop_front();
-
-                    std::string operatorType = operatorStack.top();
-                    operatorStack.pop();
-
-                    numberQueue.push_back(calculate(val1, val2, operatorType));
-                }
-                operatorStack.pop();
+                default:
+                    if (isOperator(token)) {
+                        const auto rhs = stack.back();
+                        stack.pop_back();
+                        const auto lhs = stack.back();
+                        stack.pop_back();
+                        stack.push_back(calculate(lhs, rhs, token.text));
+                    }
+                    else {
+                        //TODO log error
+                    }
+                    break;
             }
         }
 
-        while (!operatorStack.empty()) {
-            llvm::Value *val2 = numberQueue.front();
-            numberQueue.pop_front();
-
-            llvm::Value *val1 = numberQueue.front();
-            numberQueue.pop_front();
-
-            std::string operatorType = operatorStack.top();
-            operatorStack.pop();
-            numberQueue.push_back(calculate(val1, val2, operatorType));
-        }
-        return numberQueue.front();
+        return stack.back();
     }
 
     llvm::Value *MathEvaluator::calculate(llvm::Value *a, llvm::Value *b, const std::string &operatorType) {
+        llvm::outs() << "operator: " << operatorType << "\n";
         /**
          * MATHEMATICAL OPERATIONS
          */
