@@ -18,7 +18,7 @@ namespace turbolang {
     };
 
     std::deque<Token>
-    MathEvaluator::shuntingYardAlgorithm(const std::vector<Token> &tokens) {
+    MathEvaluator::shuntingYardAlgorithm(std::vector<Token> &tokens) {
         std::deque<Token> queue;
         std::vector<Token> stack;
         for (const Token &token : tokens) {
@@ -29,17 +29,11 @@ namespace turbolang {
             } else if (token.text == "(") {
                 stack.push_back(token);
             } else if (token.text == ")") {
-                bool match = false;
                 while (!stack.empty() && stack.back().text != "(") {
                     queue.push_back(stack.back());
                     stack.pop_back();
-                    match = true;
                 }
                 stack.pop_back();
-                if (!match && stack.empty()) {
-                    llvm::outs() << "Missing right parenthesis in math expression!\n";
-                    std::exit(-1);
-                }
             } else if (isOperator(token)) {
                 const auto o1 = token;
                 while (!stack.empty()) {
@@ -58,7 +52,17 @@ namespace turbolang {
     }
 
     llvm::Value *
-    MathEvaluator::eval(const std::vector<Token> &tokens, Function &currentFunction, const DataType &resultType) {
+    MathEvaluator::eval(std::vector<Token> &tokens, Function &currentFunction, const DataType &resultType) {
+        Token firstParenthesis;
+        firstParenthesis.text = "(";
+        firstParenthesis.type = TOKEN_TYPE_OPERATOR;
+        firstParenthesis.lineNumber = tokens[0].lineNumber;
+        Token secondParenthesis;
+        secondParenthesis.text = ")";
+        secondParenthesis.type = TOKEN_TYPE_OPERATOR;
+        secondParenthesis.lineNumber = tokens[0].lineNumber;
+        tokens.insert(tokens.begin(), 1, firstParenthesis);
+        tokens.push_back(secondParenthesis);
         std::string s;
         for (const auto &a : tokens) {
             s += a.text + " ";
