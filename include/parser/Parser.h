@@ -20,7 +20,7 @@ namespace turbolang {
     private:
         static std::vector<Token>::iterator currentToken;
         static std::vector<Token>::iterator endToken;
-        static std::string currentFuncName;
+        static Function* currentFunction;
 
         static bool expectFunctionDefinition();
 

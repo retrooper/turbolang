@@ -3,9 +3,9 @@
 namespace turbolang {
     std::vector<Token>::iterator Parser::currentToken;
     std::vector<Token>::iterator Parser::endToken;
-    std::string Parser::currentFuncName;
+    Function *Parser::currentFunction = nullptr;
 
-    void Parser::parse(std::vector<Token> &tokens) {
+    void Parser::parse(std::vector <Token> &tokens) {
         endToken = tokens.end();
         currentToken = tokens.begin();
         if (currentToken->type == TOKEN_TYPE_IMPORT) {
@@ -37,7 +37,7 @@ namespace turbolang {
         if (nextToken.has_value()) {
             Class clazz(nextToken.value().text);
             clazz.create();
-            std::vector<llvm::Type *> members;
+            std::vector < llvm::Type * > members;
             //Check for the class scope entry
             auto scopeEntry = expectTokenType(TOKEN_TYPE_OPERATOR, "{");
             if (scopeEntry.has_value()) {
@@ -103,7 +103,7 @@ namespace turbolang {
                     bool hasArguments = !expectTokenType(TOKEN_TYPE_OPERATOR, "()").has_value();
                     if (!hasArguments || expectTokenType(TOKEN_TYPE_OPERATOR, "(").has_value()) {
                         bool expectingComma = false;
-                        std::vector<llvm::Type *> functionArgumentTypes;
+                        std::vector < llvm::Type * > functionArgumentTypes;
                         bool argumentSizeConstant = true;
                         if (hasArguments && !expectTokenType(TOKEN_TYPE_OPERATOR, ")")) {
                             while (true) {
@@ -183,7 +183,7 @@ namespace turbolang {
     }
 
     void Parser::parseImportStatement() {
-        std::vector<std::string> importedModules;
+        std::vector <std::string> importedModules;
         bool importPending = false;
         while (true) {
             auto nextToken = expectTokenType(TOKEN_TYPE_IMPORT);
@@ -206,7 +206,7 @@ namespace turbolang {
 
         for (std::string &module : importedModules) {
             if (module.substr(module.length() - 2) != "tl") {
-                module = module + ".tl";
+                module += ".tl";
             }
             auto basePath = std::filesystem::current_path();
             auto modulesPath = basePath.string() + "/build/modules";
@@ -217,20 +217,20 @@ namespace turbolang {
                 throw std::runtime_error("Failed to read module: " + modulesPath + "/" + module);
             }
             std::filesystem::current_path(basePath);
-            std::vector<Token> tokens = Tokenizer::tokenize(code);
+            std::vector <Token> tokens = Tokenizer::tokenize(code);
             auto prevCurrToken = currentToken;
             auto prevEndToken = endToken;
-            auto prevCurrFuncName = currentFuncName;
+            auto prevFunc = currentFunction;
             Parser::parse(tokens);
             currentToken = prevCurrToken;
             endToken = prevEndToken;
-            currentFuncName = prevCurrFuncName;
+            currentFunction = prevFunc;
 
         }
     }
 
     llvm::Value *Parser::expectExpression(const DataType &resultType, const Token *token, const std::string &endAtStr,
-                                          const std::function<void(std::vector<Token> &)> &extraProcessing) {
+                                          const std::function<void(std::vector < Token > &)> &extraProcessing) {
         auto beforeFunctionCallCheck = currentToken;
         auto functionNameToken = expectTokenType(TOKEN_TYPE_IDENTIFIER);
         if (functionNameToken.has_value()) {
@@ -240,12 +240,12 @@ namespace turbolang {
             }
         }
         currentToken = beforeFunctionCallCheck;
-        std::optional<Token> nextToken;
-        std::vector<Token> expressionTokens;
+        std::optional <Token> nextToken;
+        std::vector <Token> expressionTokens;
         if (token != nullptr) {
             expressionTokens.push_back(*token);
         }
-        std::optional<Token> tempToken;
+        std::optional <Token> tempToken;
         while (true) {
             nextToken = expectToken();
             if (nextToken.has_value() && nextToken.value().text != endAtStr) {
@@ -257,14 +257,14 @@ namespace turbolang {
         extraProcessing(expressionTokens);
 
         if (expressionTokens.size() == 3 && expressionTokens[1].text == ".") {
-            return Function::functionMap[currentFuncName].getValue(
+            return currentFunction->getValue(
                     expressionTokens[0].text + "." + expressionTokens[2].text);
         }
 
-        return MathEvaluator::eval(expressionTokens, Function::functionMap[currentFuncName], resultType);
+        return MathEvaluator::eval(expressionTokens, *currentFunction, resultType);
     }
 
-    std::optional<Token> Parser::expectTokenType(const TokenType &type, const std::string &name) {
+    std::optional <Token> Parser::expectTokenType(const TokenType &type, const std::string &name) {
         if (currentToken == endToken) {
             return std::nullopt;
         }
@@ -280,11 +280,11 @@ namespace turbolang {
         return *returnToken;
     }
 
-    std::optional<Token> Parser::expectTokenType(const TokenType &type) {
+    std::optional <Token> Parser::expectTokenType(const TokenType &type) {
         return expectTokenType(type, "");
     }
 
-    std::optional<Token> Parser::expectToken() {
+    std::optional <Token> Parser::expectToken() {
         if (currentToken == endToken) {
             return std::nullopt;
         }
@@ -296,9 +296,9 @@ namespace turbolang {
     bool Parser::expectFunctionDefinition() {
         auto parseStart = currentToken;
         //Function return type
-        std::optional<Token> returnTypeIdentifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
+        std::optional <Token> returnTypeIdentifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
         if (returnTypeIdentifier.has_value()) {
-            std::optional<DataType> optionalFuncType = Type::getType(returnTypeIdentifier.value().text);
+            std::optional <DataType> optionalFuncType = Type::getType(returnTypeIdentifier.value().text);
             if (optionalFuncType.has_value()) {
                 auto returnType = optionalFuncType.value();
                 //Function name
@@ -360,8 +360,8 @@ namespace turbolang {
                     function.create();
 
                     //Store the function in the map for fast access by name.
-                    Function::functionMap[function.name] = function;
-                    currentFuncName = function.name;
+                    Function::functions.push_back(function);
+                    currentFunction = &Function::functions[Function::functions.size() - 1];
                     try {
                         //Parse the functions body.
                         parseFunctionBody();
@@ -387,7 +387,7 @@ namespace turbolang {
     void Parser::parseFunctionBody() {
         //Opening curly brackets of the function.
         if (expectTokenType(TOKEN_TYPE_OPERATOR, "{").has_value()) {
-            std::optional<Token> tempToken;
+            std::optional <Token> tempToken;
             while (true) {
                 //Check if we have approached the end of the function.
                 tempToken = expectTokenType(TOKEN_TYPE_OPERATOR, "}");
@@ -501,7 +501,7 @@ namespace turbolang {
         }
     }
 
-    void Parser::parseVariableDeclaration(const std::optional<DataType> &varType, bool isPointer,
+    void Parser::parseVariableDeclaration(const std::optional <DataType> &varType, bool isPointer,
                                           const std::string &className) {
         //Is the declared variable an array.
         bool isArray = false;
@@ -546,7 +546,7 @@ namespace turbolang {
                                                                                 llvm::Twine(
                                                                                         varName));
                 }
-                Function::functionMap[currentFuncName].setAllocaInst(
+                currentFunction->setAllocaInst(
                         varName, allocaInst);
 
 
@@ -562,7 +562,7 @@ namespace turbolang {
                         allocatedValue = allocaInst->getOperand(0);
                     }
 
-                    Function::functionMap[currentFuncName].setValue(varName, allocatedValue);
+                    currentFunction->setValue(varName, allocatedValue);
                 }
 
                 if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value() && className.empty()) {
@@ -573,16 +573,16 @@ namespace turbolang {
     }
 
 
-    void Parser::parseVariableModification(const std::optional<Token> &variableNameToken, bool isDereferencing) {
-        std::optional<Token> variableValueToken = expectToken();
+    void Parser::parseVariableModification(const std::optional <Token> &variableNameToken, bool isDereferencing) {
+        std::optional <Token> variableValueToken = expectToken();
         if (variableValueToken.has_value()) {
             llvm::Value *val = nullptr;
             auto prevTokenState = currentToken;
             //TODO abstract the SINGLE VALUE to a function called llvm::Value* expectSingleValue();
             if (variableValueToken.has_value()) {
-                llvm::AllocaInst *allocaInst = Function::functionMap[currentFuncName].getAllocaInst(
+                llvm::AllocaInst *allocaInst = currentFunction->getAllocaInst(
                         variableNameToken.value().text);
-                llvm::Type* allocaType = Function::functionMap[currentFuncName].getType(variableNameToken.value().text);
+                llvm::Type *allocaType = currentFunction->getType(variableNameToken.value().text);
                 //TODO check if the original variable is signed
                 auto dataType = Type::getType(allocaType, true);
                 if (dataType.has_value()) {
@@ -595,9 +595,9 @@ namespace turbolang {
                 }
             }
             if (isDereferencing) {
-                Function::functionMap[currentFuncName].setDereferencedValue(variableNameToken.value().text, val);
+                currentFunction->setDereferencedValue(variableNameToken.value().text, val);
             } else {
-                Function::functionMap[currentFuncName].setValue(variableNameToken.value().text, val);
+                currentFunction->setValue(variableNameToken.value().text, val);
             }
             if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
@@ -606,7 +606,7 @@ namespace turbolang {
     }
 
     llvm::Value *Parser::parseFunctionCall(const std::string &functionName) {
-        std::vector<Token> arguments;
+        std::vector <Token> arguments;
         while (!expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
             auto parameter = expectToken();
             if (!parameter.has_value()) {
@@ -625,73 +625,85 @@ namespace turbolang {
                         "Expected ',' to separate parameters or ')' to end the parameter list!");
             }
         }
-        std::vector<llvm::Value *> llvmFunctionArguments;
-        for (const auto &argument : arguments) {
+        std::vector < llvm::Value * > llvmFunctionArguments;
+        for (int i = 0; i < arguments.size(); i++) {
+            const auto argument = arguments[i];
             llvm::Value *llvmFunctionArgument;
             switch (argument.type) {
                 case TOKEN_TYPE_IDENTIFIER:
                     if (argument.text.find('&') == 0) {
                         //Its a pointer
-                        llvm::AllocaInst *allocaInst = turbolang::Function::functionMap[currentFuncName].getAllocaInst(
+                        llvm::AllocaInst *allocaInst = currentFunction->getAllocaInst(
                                 argument.text.substr(1));
                         llvmFunctionArgument = allocaInst; //We want the pointer, not the value
                     } else {
-                        llvmFunctionArgument = Function::functionMap[currentFuncName].getValue(argument.text);
+                        llvmFunctionArgument = currentFunction->getValue(argument.text);
                     }
                     break;
-                case TOKEN_TYPE_INTEGER_LITERAL:
-                    for (const auto &functionArg : Function::functionMap[functionName].arguments) {
-                        switch (functionArg.type) {
-                            case DATA_TYPE_BYTE:
-                            case DATA_TYPE_UBYTE:
-                                llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
-                                                                              llvm::APInt(8, std::stoi(
-                                                                                      argument.text)));
-                                break;
-                            case DATA_TYPE_SHORT:
-                            case DATA_TYPE_USHORT:
-                                llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
-                                                                              llvm::APInt(16,
-                                                                                          std::stoi(
-                                                                                                  argument.text)));
-                                break;
-                            case DATA_TYPE_INT:
-                            case DATA_TYPE_UINT:
-                                llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
-                                                                              llvm::APInt(32,
-                                                                                          std::stoi(
-                                                                                                  argument.text)));
-                                break;
-                            case DATA_TYPE_LONG:
-                            case DATA_TYPE_ULONG:
-                                llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
-                                                                              llvm::APInt(64,
-                                                                                          std::stoi(
-                                                                                                  argument.text)));
-                                break;
-                            default:
-                                //TODO throw exception
-                                break;
+                case TOKEN_TYPE_INTEGER_LITERAL: {
+                    //TODO change method of finding functions
+                    std::vector < Function * > validFunctions = Function::getFunctions(functionName);
+                    for (Function *func : validFunctions) {
+                        if (func->arguments[i].type == DATA_TYPE_BYTE
+                            || func->arguments[i].type == DATA_TYPE_UBYTE) {
+                            llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
+                                                                          llvm::APInt(8, std::stoi(
+                                                                                  argument.text)));
+                            break;
+                        }
+                        else if (func->arguments[i].type == DATA_TYPE_SHORT
+                                 || func->arguments[i].type == DATA_TYPE_USHORT) {
+                            llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
+                                                                          llvm::APInt(16, std::stoi(
+                                                                                  argument.text)));
+                            break;
+                        }
+                        else if (func->arguments[i].type == DATA_TYPE_INT
+                                 || func->arguments[i].type == DATA_TYPE_UINT) {
+                            llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
+                                                                          llvm::APInt(32, std::stoi(
+                                                                                  argument.text)));
+                            break;
+                        }
+                        else if (func->arguments[i].type == DATA_TYPE_LONG
+                                 || func->arguments[i].type == DATA_TYPE_ULONG) {
+                            llvmFunctionArgument = llvm::ConstantInt::get(*LLVMManager::llvmCtx,
+                                                                          llvm::APInt(64, std::stoi(
+                                                                                  argument.text)));
+                            break;
+                        }
+                        else {
+                            llvm::outs() << "Failed to find a function named " << functionName
+                                                        << " supporting a floating point at index " << i
+                                                        << " as an argument! Line number: " << currentToken->lineNumber << "\n";
+                            //TODO cleanup llvm
+                            std::exit(-1);
                         }
                     }
                     break;
-                case TOKEN_TYPE_DOUBLE_LITERAL:
-                    for (const auto &functionArg : Function::functionMap[functionName].arguments) {
-                        switch (functionArg.type) {
-                            case DATA_TYPE_FLOAT:
-                                llvmFunctionArgument = llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_FLOAT),
-                                                                             std::stod(argument.text));
-                                break;
-                            case DATA_TYPE_DOUBLE:
-                                llvmFunctionArgument = llvm::ConstantFP::get(Type::getLLVMType(DATA_TYPE_DOUBLE),
-                                                                             std::stod(argument.text));
-                                break;
-                            default:
-                                //TODO throw exception
-                                break;
+                }
+                case TOKEN_TYPE_DOUBLE_LITERAL: {
+                    std::vector < Function * > validFunctions = Function::getFunctions(functionName);
+                    bool found = false;
+                    for (Function *func : validFunctions) {
+                        if (func->arguments[i].type == DATA_TYPE_FLOAT
+                            || func->arguments[i].type == DATA_TYPE_DOUBLE) {
+                            llvmFunctionArgument = llvm::ConstantFP::get(Type::getLLVMType(func->arguments[i].type),
+                                                                         std::stod(argument.text));
+                            found = true;
+                            break;
                         }
                     }
+                    if (!found) {
+                        llvm::outs() << "Failed to find a function named " << functionName
+                                     << " supporting a floating point at index " << i
+                                     << " as an argument! Line number: " << currentToken->lineNumber << "\n";
+                        //TODO cleanup llvm
+                        std::exit(-1);
+                    }
                     break;
+                }
+
                 case TOKEN_TYPE_STRING_LITERAL:
                     llvmFunctionArgument = LLVMManager::llvmBytecodeBuilder->CreateGlobalStringPtr(
                             argument.text); //TODO civ
@@ -710,17 +722,16 @@ namespace turbolang {
         auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
         if (openingParenthesis.has_value()) {
             auto loopCheckState = currentToken;
-            auto extraProcessing = [](std::vector<Token> &tokens) {
+            auto extraProcessing = [](std::vector <Token> &tokens) {
                 tokens.pop_back();
             };
             llvm::Value *whileLoopValue = expectExpression(DATA_TYPE_BOOL, nullptr, "{", extraProcessing);
-            Function *function = &Function::functionMap[currentFuncName];
             llvm::BasicBlock *loop = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "loop",
-                                                              function->llvmFunction);
+                                                              currentFunction->llvmFunction);
 
             llvm::BasicBlock *afterLoop =
                     llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "afterloop",
-                                             function->llvmFunction);
+                                             currentFunction->llvmFunction);
 
             auto comp = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(whileLoopValue, llvm::ConstantInt::get(
                     Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
@@ -765,20 +776,19 @@ namespace turbolang {
     void Parser::parseIfStatement() {
         auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
         if (openingParenthesis.has_value()) {
-            auto extraProcessing = [](std::vector<Token> &tokens) {
+            auto extraProcessing = [](std::vector <Token> &tokens) {
                 tokens.pop_back();
             };
             llvm::Value *statementValue = expectExpression(DATA_TYPE_BOOL, nullptr, "{", extraProcessing);
-            Function *function = &Function::functionMap[currentFuncName];
             llvm::BasicBlock *statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "if-statement",
-                                                                   function->llvmFunction);
+                                                                   currentFunction->llvmFunction);
 
             llvm::BasicBlock *afterStatement =
                     llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-if-statement",
-                                             function->llvmFunction);
+                                             currentFunction->llvmFunction);
 
             llvm::BasicBlock *endBlock = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "statement-end-block",
-                                                                  function->llvmFunction);
+                                                                  currentFunction->llvmFunction);
 
 
             auto comp = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue, llvm::ConstantInt::get(
@@ -824,18 +834,17 @@ namespace turbolang {
     }
 
     void Parser::parseElifStatement(llvm::BasicBlock *&endBlock) {
-        Function *function = &Function::functionMap[currentFuncName];
         auto openingParenthesis = expectTokenType(TOKEN_TYPE_OPERATOR, "(");
         if (openingParenthesis.has_value()) {
-            auto extraProcessing = [](std::vector<Token> &tokens) {
+            auto extraProcessing = [](std::vector <Token> &tokens) {
                 tokens.pop_back();
             };
             auto statementValue = expectExpression(DATA_TYPE_BOOL, nullptr, "{", extraProcessing);
             auto statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "elif-statement",
-                                                      function->llvmFunction);
+                                                      currentFunction->llvmFunction);
             auto afterStatement =
                     llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "after-elif-statement",
-                                             function->llvmFunction);
+                                             currentFunction->llvmFunction);
             auto localCondition = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue,
                                                                                  llvm::ConstantInt::get(
                                                                                          Type::getLLVMType(
@@ -851,9 +860,8 @@ namespace turbolang {
     }
 
     void Parser::parseElseStatement(llvm::BasicBlock *&endBlock) {
-        Function *function = &Function::functionMap[currentFuncName];
         auto statement = llvm::BasicBlock::Create(*LLVMManager::llvmCtx, "else-statement",
-                                                  function->llvmFunction);
+                                                  currentFunction->llvmFunction);
         LLVMManager::llvmBytecodeBuilder->CreateBr(statement);
         LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
         parseFunctionBody();

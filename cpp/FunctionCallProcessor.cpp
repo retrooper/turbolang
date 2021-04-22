@@ -11,4 +11,5 @@ namespace turbolang {
         }
         return LLVMManager::llvmBytecodeBuilder->CreateCall(llvmFunction, arguments);
     }
+
 }

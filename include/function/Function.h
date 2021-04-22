@@ -14,7 +14,7 @@ namespace turbolang {
 
     class Function {
     public:
-        static std::map<std::string, Function> functionMap;
+        static std::vector<Function> functions;
         std::string name;
         std::string extraData;
         DataType type;
@@ -25,6 +25,9 @@ namespace turbolang {
         Function() = default;
         Function(const std::string& name, DataType type, const std::string& extraData = "");
 
+        static Function* getFunction(const std::string& functionName, const DataType& returnType, const std::vector<DataType>& argumentTypes);
+        static std::vector<Function*> getFunctions(const std::string& functionName, const std::vector<DataType>& argumentTypes);
+        static std::vector<Function*> getFunctions(const std::string& functionName);
         void create();
         void setAllocaInst(const std::string& name, llvm::AllocaInst* allocaInst);
         llvm::AllocaInst* getAllocaInst(std::string name);

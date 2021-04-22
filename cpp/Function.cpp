@@ -3,7 +3,7 @@
 #include <utility>
 
 namespace turbolang {
-    std::map<std::string, Function> Function::functionMap;
+    std::vector<Function> Function::functions;
 
     Function::Function(const std::string &name, DataType type, const std::string &extraData) {
         this->name = name;
@@ -84,18 +84,20 @@ namespace turbolang {
     llvm::Value *Function::getDereferencedValue(std::string name) {
         std::vector<std::string> tokens = split(name, ".");
         if (tokens.size() == 1) {
-            llvm::Value* allocaInst = getValue(name);
+            llvm::Value *allocaInst = getValue(name);
             return LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst);
         } else {
             //Struct type alloca
             llvm::AllocaInst *allocaInst = allocaMap[tokens[0]];
-            llvm::Value* instance = LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst);
+            llvm::Value *instance = LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst);
             auto *structType = (llvm::StructType *) allocaInst->getAllocatedType();
             llvm::outs() << "Class name: " << structType->getName().str() << "\n";
             Class clazz = Class::classMap[structType->getName().str()];
             unsigned int memberIndex = clazz.getMemberIndex(tokens[1]);
-            llvm::AllocaInst* ptr =  (llvm::AllocaInst *) LLVMManager::llvmBytecodeBuilder->CreateStructGEP(instance, memberIndex,
-                                                                                          llvm::Twine(tokens[1]));
+            llvm::AllocaInst *ptr = (llvm::AllocaInst *) LLVMManager::llvmBytecodeBuilder->CreateStructGEP(instance,
+                                                                                                           memberIndex,
+                                                                                                           llvm::Twine(
+                                                                                                                   tokens[1]));
             return LLVMManager::llvmBytecodeBuilder->CreateLoad(ptr);
         }
     }
@@ -108,6 +110,61 @@ namespace turbolang {
     void Function::setDereferencedValue(std::string name, llvm::Value *value) {
         llvm::Value *pointer = getValue(std::move(name));
         llvm::StoreInst *storeInst = LLVMManager::llvmBytecodeBuilder->CreateStore(value, pointer);
+    }
+
+    Function *Function::getFunction(const std::string &functionName, const DataType &returnType,
+                                    const std::vector<DataType> &argumentTypes) {
+        for (int i = 0; i < functions.size(); i++) {
+            Function *function = &functions[i];
+            if (function->name == functionName
+                && function->type == returnType
+                && function->arguments.size() == argumentTypes.size()) {
+                bool allMatching = true;
+                for (const auto &funcArg: function->arguments) {
+                    if (funcArg.type != argumentTypes[i]) {
+                        allMatching = false;
+                        break;
+                    }
+                }
+                if (allMatching) {
+                    return function;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    std::vector<Function *> Function::getFunctions(const std::string &functionName,
+                                                   const std::vector<DataType> &argumentTypes) {
+        std::vector<Function *> validFunctions;
+        for (int i = 0; i < functions.size(); i++) {
+            Function *function = &functions[i];
+            if (function->name == functionName
+                && function->arguments.size() == argumentTypes.size()) {
+                bool allMatching = true;
+                for (const auto &funcArg: function->arguments) {
+                    if (funcArg.type != argumentTypes[i]) {
+                        allMatching = false;
+                        break;
+                    }
+                }
+                if (allMatching) {
+                    validFunctions.push_back(function);
+                }
+            }
+        }
+        return validFunctions;
+    }
+
+    std::vector<Function *> Function::getFunctions(const std::string &functionName) {
+        std::vector<Function *> validFunctions;
+        for (auto & i : functions) {
+            Function *function = &i;
+            if (function->name == functionName) {
+                validFunctions.push_back(function);
+            }
+        }
+        return validFunctions;
     }
 
     std::vector<std::string> Function::split(const std::string &str, const std::string &delim) {
