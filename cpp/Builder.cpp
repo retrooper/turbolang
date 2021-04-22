@@ -4,7 +4,7 @@ namespace turbolang {
     volatile int Builder::tasksFinished = 0;
 
     void Builder::buildExecutables() {
-        std::string additionalArguments = "-lm -O0";
+        std::string additionalArguments = "-lm -Ofast";//Ofast is maximum, O0 is none
         /**
          * LOCAL BINARY FILE
          */

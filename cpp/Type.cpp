@@ -39,7 +39,7 @@ namespace turbolang {
         };
     }
 
-    llvm::Type *Type::getLLVMType(const int &type, const std::string &extraData) {
+    llvm::Type *Type::getLLVMType(const DataType &type, const std::string &extraData) {
         if (type == DATA_TYPE_CLASS) {
             return Class::classMap[extraData].structType;
         }
@@ -95,5 +95,32 @@ namespace turbolang {
             }
         }
         return false;
+    }
+
+    int Type::getBitCount(const DataType &type) {
+        switch (type) {
+            case DATA_TYPE_VOID:
+            case DATA_TYPE_CLASS:
+            case DATA_TYPE_UNKNOWN:
+                return -1;
+            case DATA_TYPE_BOOL:
+                return 1;
+            case DATA_TYPE_BYTE:
+                case DATA_TYPE_UBYTE:
+                return 8;
+            case DATA_TYPE_SHORT:
+            case DATA_TYPE_USHORT:
+                return 16;
+            case DATA_TYPE_INT:
+            case DATA_TYPE_UINT:
+                return 32;
+            case DATA_TYPE_LONG:
+            case DATA_TYPE_ULONG:
+                return 64;
+            case DATA_TYPE_FLOAT:
+                return 32;
+            case DATA_TYPE_DOUBLE:
+                return 64;
+        }
     }
 }

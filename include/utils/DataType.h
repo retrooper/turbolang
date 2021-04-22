@@ -10,6 +10,7 @@ namespace turbolang {
         DATA_TYPE_LONG = 8, DATA_TYPE_ULONG = 9,
         DATA_TYPE_FLOAT = 10,
         DATA_TYPE_DOUBLE = 11,
-        DATA_TYPE_CLASS = 12
+        DATA_TYPE_CLASS = 12,
+        DATA_TYPE_UNKNOWN = 13
     };
 }

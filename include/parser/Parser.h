@@ -32,7 +32,7 @@ namespace turbolang {
 
         static std::optional<Token> expectToken();
 
-        static llvm::Value* expectExpression(const DataType& resultType, const Token* token = nullptr, const std::string& endAtStr = ";",
+        static llvm::Value* expectExpression(const DataType& resultType, const std::string& className = "",  const Token* token = nullptr, const std::string& endAtStr = ";",
                                              const std::function<void(std::vector<Token>&)>& extraProcessing = [](std::vector<Token>& tokens){});
 
         static void parseStatement();

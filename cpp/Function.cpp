@@ -12,6 +12,9 @@ namespace turbolang {
     }
 
     void Function::create() {
+        struct timespec ts{};
+        clock_gettime(CLOCK_REALTIME, &ts);
+        long currentNS = ts.tv_nsec;
         llvm::FunctionType *llvmFunctionType;
         if (arguments.empty()) {
             llvmFunctionType = llvm::FunctionType::get(Type::getLLVMType(type, extraData), false);
