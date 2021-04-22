@@ -1,5 +1,6 @@
 declare f64 sqrt(f64);
 declare f64 acos(f64);
+
 class Vec3 {
     f64 x;
     f64 y;
@@ -32,20 +33,9 @@ f64 getVecAngle(Vec3 a, Vec3 b) {
     f64 dot = getVecDot(a, b);
     f64 aLength = getVecLength(a);
     f64 bLength = getVecLength(b);
-    f64 value = dot / aLength * bLength;
-    f64 angle = acos(value);
+    f64 len = aLength * bLength;
+    f64 dividend = sqrt(len);
+    f64 value = dot / dividend;
+    f64 angle = value;
     return angle;
-}
-
-
-f64 getVecX(Vec3 a) {
-    return a.x;
-}
-
-f64 getVecY(Vec3 a) {
-    return a.y;
-}
-
-f64 getVecZ(Vec3 a) {
-    return a.z;
 }
