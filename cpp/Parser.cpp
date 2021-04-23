@@ -95,6 +95,7 @@ namespace turbolang {
                 isPointer = true;
             }
             auto functionTypeOptional = Type::getType(nextToken.value().text);
+            std::string functionTypeStr = nextToken.value().text;
             if (functionTypeOptional.has_value()) {
                 auto functionType = functionTypeOptional.value();
                 nextToken = expectTokenType(TOKEN_TYPE_IDENTIFIER);
@@ -168,7 +169,7 @@ namespace turbolang {
                         }
                         nextToken = expectTokenType(TOKEN_TYPE_OPERATOR, ";");
                         if (nextToken.has_value()) {
-                            llvm::Type *returnType = Type::getLLVMType(functionType);
+                            llvm::Type *returnType = Type::getLLVMType(functionType, functionTypeStr);
                             if (isPointer) {
                                 returnType = returnType->getPointerTo();
                             }
@@ -577,7 +578,6 @@ namespace turbolang {
         std::optional<Token> variableValueToken = expectToken();
         if (variableValueToken.has_value()) {
             llvm::Value *val = nullptr;
-            auto prevTokenState = currentToken;
             //TODO abstract the SINGLE VALUE to a function called llvm::Value* expectSingleValue();
             if (variableValueToken.has_value()) {
                 llvm::AllocaInst *allocaInst = currentFunction->getAllocaInst(
@@ -590,9 +590,8 @@ namespace turbolang {
                     std::string className = dataType == DATA_TYPE_CLASS ? allocaType->getStructName().str() : "";
                     val = expectExpression(dataType.value(), className, &variableValueToken.value());
                 } else {
-                    std::cout << "wtf" << std::endl;
-                    throw std::runtime_error(
-                            &"Failed to access type of allocated variable when modifying. Line: "[currentToken->lineNumber]);
+                    std::cerr << "Failed to access type of variable you ae trying to modify. Line: " << currentToken->lineNumber << std::endl;
+                    std::exit(-1);
                 }
             }
             if (isDereferencing) {

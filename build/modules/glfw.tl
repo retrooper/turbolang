@@ -1,8 +1,23 @@
-class GLFWwindow {
+class GLFWHandle {
 
 }
 
 declare i32 glfwInit();
+declare void glfwTerminate();
 
-#GLFWwindow is return type
-declare i8* glfwCreateWindow(i32, i32, i8*, i8*, i8*);
+declare GLFWHandle* glfwCreateWindow(i32, i32, i8*, GLFWHandle*, GLFWHandle*);
+declare void glfwDestroyWindow(GLFWHandle*);
+declare i32 glfwWindowShouldClose(GLFWHandle*);
+
+declare void glfwPollEvents();
+declare f64 glfwGetTime();
+declare i8* glfwGetClipboardString(GLFWHandle*);
+declare i32 glfwVulkanSupported();
+declare void glfwWindowHint(i32, i32);
+declare void glfwShowWindow(GLFWHandle*);
+declare void glfwHideWindow(GLFWHandle*);
+declare void glfwFocusWindow(GLFWHandle*);
+declare i32 glfwGetKey(GLFWHandle*, i32);
+declare void glfwGetWindowSize(GLFWHandle*, i32*, i32*);
+declare void glfwSetWindowTitle(GLFWHandle*, i8*);
+declare void glfwGetFramebufferSize(GLFWHandle*, i32*, i32*);

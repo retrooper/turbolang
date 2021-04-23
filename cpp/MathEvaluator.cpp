@@ -53,7 +53,8 @@ namespace turbolang {
     }
 
     llvm::Value *
-    MathEvaluator::eval(std::vector<Token> &tokens, Function &currentFunction, DataType resultType, const std::string& className) {
+    MathEvaluator::eval(std::vector<Token> &tokens, Function &currentFunction, DataType resultType,
+                        const std::string &className) {
         std::string s;
         for (const auto &a : tokens) {
             s += a.text + " ";
@@ -64,8 +65,7 @@ namespace turbolang {
             std::string::iterator end_pos = std::remove(s.begin(), s.end(), ' ');
             s.erase(end_pos, s.end());
             return currentFunction.getDereferencedValue(s.substr(1));
-        }
-        else if (s.find('&') == 0) {
+        } else if (s.find('&') == 0) {
             std::string::iterator end_pos = std::remove(s.begin(), s.end(), ' ');
             s.erase(end_pos, s.end());
             return currentFunction.getAllocaInst(s.substr(1));
@@ -81,21 +81,24 @@ namespace turbolang {
         tokens.insert(tokens.begin(), 1, firstParenthesis);
         tokens.push_back(secondParenthesis);
         std::deque<Token> queue = shuntingYardAlgorithm(tokens);
-        std::vector<llvm::Value*> stack;
-        while(!queue.empty()) {
+        std::vector<llvm::Value *> stack;
+        while (!queue.empty()) {
             const auto token = queue.front();
             queue.pop_front();
-            switch(token.type) {
-                case TOKEN_TYPE_INTEGER_LITERAL: {
-                    resultType = resultType == DATA_TYPE_UNKNOWN ? DATA_TYPE_INT : resultType;
+            switch (token.type) {
+                case TOKEN_TYPE_INTEGER_LITERAL:
+                    resultType = resultType == DATA_TYPE_UNKNOWN
+                            || resultType == DATA_TYPE_BOOL
+                            ? DATA_TYPE_INT : resultType;
                     stack.push_back(llvm::ConstantInt::get(
                             Type::getLLVMType(resultType),
                             llvm::APInt(Type::getBitCount(resultType),
-                                        std::stoi(token.text))));//TODO change num bits and support other int types
+                                        std::stoi(token.text))));
                     break;
-                }
                 case TOKEN_TYPE_DOUBLE_LITERAL:
-                    resultType = resultType == DATA_TYPE_UNKNOWN ? DATA_TYPE_DOUBLE : resultType;
+                    resultType = resultType == DATA_TYPE_UNKNOWN
+                                 || resultType == DATA_TYPE_BOOL
+                                 ? DATA_TYPE_DOUBLE : resultType;
                     stack.push_back(llvm::ConstantFP::get(Type::getLLVMType(resultType), std::stod(token.text)));
                     break;
                 case TOKEN_TYPE_STRING_LITERAL:
@@ -107,11 +110,11 @@ namespace turbolang {
                         variableValue = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1));
                     } else if (token.text == "false") {
                         variableValue = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 0));
-                    }
-                    else if (token.text == "nullptr") {
-                        variableValue = llvm::ConstantPointerNull::get(llvm::PointerType::get(Type::getLLVMType(resultType == DATA_TYPE_UNKNOWN ? DATA_TYPE_VOID : resultType, className), 0));
-                    }
-                    else {
+                    } else if (token.text == "nullptr") {
+                        variableValue = llvm::ConstantPointerNull::get(llvm::PointerType::get(
+                                Type::getLLVMType(resultType == DATA_TYPE_UNKNOWN ? DATA_TYPE_VOID : resultType,
+                                                  className), 0));
+                    } else {
                         variableValue = currentFunction.getValue(token.text);
                     }
                     stack.push_back(variableValue);
@@ -124,8 +127,7 @@ namespace turbolang {
                         const auto lhs = stack.back();
                         stack.pop_back();
                         stack.push_back(calculate(lhs, rhs, token.text));
-                    }
-                    else {
+                    } else {
                         //TODO log error
                     }
                     break;
@@ -169,6 +171,7 @@ namespace turbolang {
              * LANGUAGE OPERATIONS
              */
         else if (operatorType == "==") {
+            llvm::outs() << "first type: " << *a->getType() << ", second: " << *b->getType() << "\n";
             return LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(a, b);
         } else if (operatorType == "!=") {
             return LLVMManager::llvmBytecodeBuilder->CreateICmpNE(a, b);

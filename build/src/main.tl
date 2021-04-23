@@ -1,16 +1,34 @@
 import "io"
 import "time"
-#import "glfw"
-
+import "glfw"
+import "system"
 i32 main() {
-    #glfwInit();
-    #i8* np = nullptr;
-    #i32 width = 1280;
-    #i32 height = 720;
-    #i8* title = "Hello, World";
-    #glfwCreateWindow(width, height, title, np, np);K
-    while (true) {
-         i64 ct = getCurrentTimeMilli();
+    i32 result = glfwInit();
+    if (result == 0) {
+        println("Why did GLFW init fail!");
+        exit(-1);
+    }
+    else {
+        GLFWHandle* np = nullptr;
+        GLFWHandle* window = glfwCreateWindow(1280, 720, "Hello, World", np, np);
+        println("Created window!");
+        i32 temp = glfwVulkanSupported();
+        bool vkSupported = temp != 0;
+        if (vkSupported) {
+            println("Vulkan is supported!");
+        }
+        else {
+            println("Why is vulkan not supported?");
+        }
+        bool shouldClose = false;
+        while (shouldClose == false) {
+            glfwPollEvents();
+            i32 temp2 = glfwWindowShouldClose(window);
+            shouldClose = temp2 != 0;
+        }
+        println("Exiting program!");
+        glfwDestroyWindow(window);
+        glfwTerminate();
     }
     return 0;
 }
