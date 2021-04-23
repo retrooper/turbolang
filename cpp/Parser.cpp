@@ -611,24 +611,25 @@ namespace turbolang {
         //fopen(name, "w+");
         std::vector<Token> tokens;
         while (!expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
-            auto op = expectTokenType(TOKEN_TYPE_OPERATOR, ",");
-            if (op.has_value()) {
-                tokens.clear();
-                continue;
-            }
             while (true) {
                 auto newToken = expectToken();
                 if (!newToken.has_value() || (newToken.value().type == TOKEN_TYPE_OPERATOR &&
                                               (newToken.value().text == "," || newToken.value().text == ")"))) {
-                    if (newToken.value().text == ")") {
-                        currentToken--;
-                    }
+                    currentToken--;
                     break;
                 }
                 auto parameter = newToken.value();
+                llvm::outs() << "arg: " << parameter.text << "\n";
                 tokens.push_back(parameter);
             }
-            arguments.push_back(tokens);
+            auto op = expectTokenType(TOKEN_TYPE_OPERATOR);
+            if (op.has_value()) {
+                arguments.push_back(tokens);
+                tokens.clear();
+                if (op.value().text == ")") {
+                    break;
+                }
+            }
         }
         std::vector<llvm::Value *> llvmFunctionArguments;
         for (auto argument : arguments) {

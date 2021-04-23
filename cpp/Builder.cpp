@@ -4,7 +4,7 @@ namespace turbolang {
     volatile int Builder::tasksFinished = 0;
 
     void Builder::buildExecutables() {
-        std::string additionalArguments = "-lm -Ofast";//Ofast is maximum, O0 is none
+        std::string additionalArguments = "-lm -lglfw -Ofast";//Ofast is maximum, O0 is none
         /**
          * LOCAL BINARY FILE
          */
@@ -26,20 +26,20 @@ namespace turbolang {
         std::filesystem::current_path(windowsPath);
         //x86 Windows
         std::thread x86WindowsThread([&windowsPath, &additionalArguments]() {
-            auto x86WindowsPath = windowsPath + "/x86";
+            /*auto x86WindowsPath = windowsPath + "/x86";
             std::string command =
                     "i686-w64-mingw32-clang++ ../../bytecode/output.ll -o " + x86WindowsPath + "/output_x86.exe ";
             command += additionalArguments;
-            std::system(command.c_str());
+            std::system(command.c_str());*/
             tasksFinished++;
         });
 
         //x86_64 Windows
         std::thread x64WindowsThread([&windowsPath, &additionalArguments]() {
-            auto x64WindowsPath = windowsPath + "/x64";
+            /*auto x64WindowsPath = windowsPath + "/x64";
             std::string command =
                     "x86_64-w64-mingw32-clang++ ../../bytecode/output.ll -o " + x64WindowsPath + "/output_x64.exe " + additionalArguments;
-            std::system(command.c_str());
+            std::system(command.c_str());*/
             tasksFinished++;
         });
 
@@ -47,16 +47,16 @@ namespace turbolang {
         auto linuxPath = basePath + "/executables/linux";
         //x86 Linux
         std::thread x86LinuxThread([&linuxPath, &additionalArguments]() {
-            auto x86LinuxPath = linuxPath + "/x86";
+            /*auto x86LinuxPath = linuxPath + "/x86";
             std::string command = "clang++ ../../bytecode/output.ll -o " + x86LinuxPath + "/output_x86 " + additionalArguments;
-            std::system(command.c_str());
+            std::system(command.c_str());*/
             tasksFinished++;
         });
         //x86_64 Linux
         std::thread x64LinuxThread([&linuxPath, &additionalArguments]() {
-            auto x64LinuxPath = linuxPath + "/x64";
+            /*auto x64LinuxPath = linuxPath + "/x64";
             std::string command = "clang++ ../../bytecode/output.ll -o " + x64LinuxPath + "/output_x64 " + additionalArguments;
-            std::system(command.c_str());
+            std::system(command.c_str());*/
             tasksFinished++;
         });
 
@@ -66,16 +66,16 @@ namespace turbolang {
 
         //arm64 MacOS
         std::thread arm64MacosThread([&macosPath, &additionalArguments]() {
-            auto arm64MacosPath = macosPath + "/arm64";
+            /*auto arm64MacosPath = macosPath + "/arm64";
             std::string command = "clang++ ../../bytecode/output.ll -o " + arm64MacosPath + "/output_arm64.app " + additionalArguments;
-            std::system(command.c_str());
+            std::system(command.c_str());*/
             tasksFinished++;
         });
         //arm64e (newer than arm64) MacOS
         std::thread arm64eMacosThread([&macosPath, &additionalArguments]() {
-            auto arm64eMacosPath = macosPath + "/arm64e";
+            /*auto arm64eMacosPath = macosPath + "/arm64e";
             std::string command = "clang++ ../../bytecode/output.ll -o " + arm64eMacosPath + "/output_arm64e.app " + additionalArguments;
-            std::system(command.c_str());
+            std::system(command.c_str());*/
             tasksFinished++;
         });
 
