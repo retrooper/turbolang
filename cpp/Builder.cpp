@@ -1,10 +1,10 @@
 #include "builder/Builder.h"
-
 namespace turbolang {
     volatile int Builder::tasksFinished = 0;
 
     void Builder::buildExecutables() {
-        std::vector<std::string> libraries = {"m", "glfw", "OpenGL"};
+        //UNKNOWN, GLFW, OpenGL, GLib
+        std::vector<std::string> libraries = {"m", "glfw", "OpenGL", "glib-2.0"};
         std::string additionalArguments = "-Ofast ";//Ofast is maximum optimizations, O0 is no optimizations
         for (const std::string& library : libraries) {
             additionalArguments += "-l" + library + " ";

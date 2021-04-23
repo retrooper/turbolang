@@ -60,7 +60,7 @@ i32 main() {
         GLFWHandle* np = nullptr;
         GLFWHandle* window = glfwCreateWindow(1280, 720, "Hello, World", np, np);
         glfwMakeContextCurrent(window);
-        f32 rgb = 0.1;
+        f32 rgb = 0.5;
         f32 alpha = 0.5;
         glfwSwapInterval(1);
         glClearColor(rgb, rgb, rgb, alpha);

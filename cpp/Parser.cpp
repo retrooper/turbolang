@@ -577,10 +577,11 @@ namespace turbolang {
     void Parser::parseVariableModification(const std::optional<Token> &variableNameToken, bool isDereferencing) {
         llvm::Type *allocaType = currentFunction->getType(variableNameToken.value().text);
         //TODO check if the original variable is signed
+        llvm::outs() << "name: " << variableNameToken.value().text << ", allcoa type: " << *allocaType << "\n";
         auto dataType = Type::getType(allocaType, true);
         if (dataType.has_value()) {
             //Handle an expression
-            std::string className = dataType == DATA_TYPE_CLASS ? allocaType->getStructName().str() : "";
+            std::string className = dataType == DATA_TYPE_CLASS ? allocaType->isPointerTy() ? (allocaType->getPointerElementType()->getStructName().str()) : (allocaType->getStructName().str()) : "";
             llvm::Value* val = expectExpression(dataType.value(), className);
             if (isDereferencing) {
                 currentFunction->setDereferencedValue(variableNameToken.value().text, val);

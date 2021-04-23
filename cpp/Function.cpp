@@ -27,7 +27,7 @@ namespace turbolang {
                 }
                 params.push_back(argType);
             }
-            llvmFunctionType = llvm::FunctionType::get(Type::getLLVMType(type), params, false);
+            llvmFunctionType = llvm::FunctionType::get(Type::getLLVMType(type, extraData), params, false);
         }
         llvmFunction = llvm::Function::Create(llvmFunctionType, llvm::Function::ExternalLinkage, name,
                                               LLVMManager::llvmModule);

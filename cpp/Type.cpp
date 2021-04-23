@@ -71,10 +71,9 @@ namespace turbolang {
 
     std::optional<DataType> Type::getType(const llvm::Type *type, const bool& isSigned) {
         if (type == nullptr) {
-
             return std::nullopt;
         }
-        if (llvm::isa<llvm::StructType>(type)) {
+        if (type->isPointerTy() ? llvm::isa<llvm::StructType>(type->getPointerElementType()) : llvm::isa<llvm::StructType>(type)) {
             return DATA_TYPE_CLASS;
         }
         if (typeMap.empty()) {
@@ -82,7 +81,7 @@ namespace turbolang {
         }
 
         for (const auto& iter : typeMap) {
-            bool sameID = iter.second.type->getTypeID() == type->getTypeID();
+            bool sameID = iter.second.type->getTypeID() == (type->isPointerTy() ? type->getPointerElementType()->getTypeID() : type->getTypeID());
             bool found = sameID && (!iter.second.validSign || iter.second.isSigned == isSigned);
             if (found) {
                 return static_cast<DataType>(iter.second.index);
