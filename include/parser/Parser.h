@@ -21,6 +21,7 @@ namespace turbolang {
         static std::vector<Token>::iterator currentToken;
         static std::vector<Token>::iterator endToken;
         static Function* currentFunction;
+        static std::vector<std::string> modules;
 
         static bool expectFunctionDefinition();
 
@@ -39,6 +40,7 @@ namespace turbolang {
 
         static void parseFunctionDeclareStatement();
 
+        static void parseModule(std::string& module);
         static void parseImportStatement();
 
         static void parseClassDefinition();

@@ -4,6 +4,7 @@ namespace turbolang {
     std::vector<Token>::iterator Parser::currentToken;
     std::vector<Token>::iterator Parser::endToken;
     Function *Parser::currentFunction = nullptr;
+    std::vector<std::string> Parser::modules;
 
     void Parser::parse(std::vector<Token> &tokens) {
         endToken = tokens.end();
@@ -186,32 +187,14 @@ namespace turbolang {
         }
     }
 
-    void Parser::parseImportStatement() {
-        std::vector<std::string> importedModules;
-        bool importPending = false;
-        while (true) {
-            auto nextToken = expectTokenType(TOKEN_TYPE_IMPORT);
-            if (nextToken.has_value()) {
-                importPending = true;
-            } else {
-                if (importPending) {
-                    nextToken = expectTokenType(TOKEN_TYPE_STRING_LITERAL);
-                    if (nextToken.has_value()) {
-                        importedModules.push_back(nextToken.value().text);
-                        importPending = false;
-                    } else {
-                        throw std::runtime_error("Invalid module format!");
-                    }
-                } else {
-                    break;
-                }
-            }
+    void Parser::parseModule(std::string& module) {
+        std::string extension = "tl";
+        int dotIndex = module.find('.');
+        if (dotIndex == std::string::npos || module.substr(dotIndex) != extension) {
+            module += "." + extension;
         }
-
-        for (std::string &module : importedModules) {
-            if (module.substr(module.length() - 2) != "tl") {
-                module += ".tl";
-            }
+        //We only parse new modules. We will not parse the same module twice.
+        if (!(std::find(modules.begin(), modules.end(), module) != modules.end())) {
             auto basePath = std::filesystem::current_path();
             auto modulesPath = basePath.string() + "/build/modules";
             std::filesystem::current_path(modulesPath);
@@ -229,7 +212,30 @@ namespace turbolang {
             currentToken = prevCurrToken;
             endToken = prevEndToken;
             currentFunction = prevFunc;
+            modules.push_back(module);
+        }
+    }
 
+    void Parser::parseImportStatement() {
+        bool importPending = false;
+        while (true) {
+            auto nextToken = expectTokenType(TOKEN_TYPE_IMPORT);
+            if (nextToken.has_value()) {
+                importPending = true;
+            } else {
+                if (importPending) {
+                    nextToken = expectTokenType(TOKEN_TYPE_STRING_LITERAL);
+                    if (nextToken.has_value()) {
+                        std::string module = nextToken.value().text;
+                        parseModule(module);
+                        importPending = false;
+                    } else {
+                        throw std::runtime_error("Invalid module format!");
+                    }
+                } else {
+                    break;
+                }
+            }
         }
     }
 
@@ -600,7 +606,6 @@ namespace turbolang {
 
     llvm::Value *Parser::parseFunctionCall(const std::string &functionName) {
         std::vector<std::vector<Token>> arguments;
-        //fopen(name, "w+");
         std::vector<Token> tokens;
         while (!expectTokenType(TOKEN_TYPE_OPERATOR, ")").has_value()) {
             while (true) {
@@ -623,9 +628,21 @@ namespace turbolang {
             }
         }
         std::vector<llvm::Value *> llvmFunctionArguments;
-        for (auto argument : arguments) {
+        llvm::Function* llvmFunction = LLVMManager::llvmModule->getFunction(functionName);
+        for (int i = 0; i < arguments.size(); i++) {
+            auto argument = arguments[i];
+            DataType resultType = DATA_TYPE_UNKNOWN;
+            std::string resultClassName = "";
+            if (llvmFunction != nullptr) {
+                auto arg = llvmFunction->getArg(i);
+                auto dataTypeOptional = Type::getType(arg->getType(), true);
+                resultType = dataTypeOptional.has_value() ? dataTypeOptional.value() : DATA_TYPE_UNKNOWN;
+                if (resultType == DATA_TYPE_CLASS) {
+                    resultClassName = arg->getType()->isPointerTy() ? arg->getType()->getPointerElementType()->getStructName().str() : arg->getType()->getStructName().str();
+                }
+            }
             //TODO support functions returning custom types
-            llvm::Value *llvmFunctionArgument = MathEvaluator::eval(argument, *currentFunction, DATA_TYPE_UNKNOWN);
+            llvm::Value *llvmFunctionArgument = MathEvaluator::eval(argument, *currentFunction, resultType, resultClassName);
             if (llvmFunctionArgument != nullptr) {
                 llvmFunctionArguments.push_back(llvmFunctionArgument);
             }
@@ -680,7 +697,8 @@ namespace turbolang {
                 llvmReturnValue = expectExpression(currentFunction->type, "", &returnValue.value());
             }
         } else {
-            throw std::runtime_error(&"Invalid return statement! Line: "[currentToken->lineNumber]);
+            std::cerr << "Invalid return statement! Line: " << currentToken->lineNumber << std::endl;
+            std::exit(-1);
         }
         LLVMManager::llvmBytecodeBuilder->CreateRet(llvmReturnValue);
         if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {

@@ -59,7 +59,7 @@ namespace turbolang {
         for (const auto &a : tokens) {
             s += a.text + " ";
         }
-        llvm::outs() << "Evaluating Expression: " << s << "\n";
+        //llvm::outs() << "Evaluating Expression: " << s << "\n";
         if (s.find('*') == 0) {
             //Dereference
             std::string::iterator end_pos = std::remove(s.begin(), s.end(), ' ');
@@ -90,10 +90,16 @@ namespace turbolang {
                     resultType = resultType == DATA_TYPE_UNKNOWN
                             || resultType == DATA_TYPE_BOOL
                             ? DATA_TYPE_INT : resultType;
-                    stack.push_back(llvm::ConstantInt::get(
-                            Type::getLLVMType(resultType),
-                            llvm::APInt(Type::getBitCount(resultType),
-                                        std::stoi(token.text))));
+                   if (resultType == DATA_TYPE_FLOAT
+                   || resultType == DATA_TYPE_DOUBLE) {
+                       stack.push_back(llvm::ConstantFP::get(Type::getLLVMType(resultType), std::stod(token.text)));
+                   }
+                   else {
+                       stack.push_back(llvm::ConstantInt::get(
+                               Type::getLLVMType(resultType),
+                               llvm::APInt(Type::getBitCount(resultType),
+                                           std::stoi(token.text))));
+                   }
                     break;
                 case TOKEN_TYPE_DOUBLE_LITERAL:
                     resultType = resultType == DATA_TYPE_UNKNOWN
@@ -112,7 +118,7 @@ namespace turbolang {
                         variableValue = llvm::ConstantInt::get(Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 0));
                     } else if (token.text == "nullptr") {
                         variableValue = llvm::ConstantPointerNull::get(llvm::PointerType::get(
-                                Type::getLLVMType(resultType == DATA_TYPE_UNKNOWN ? DATA_TYPE_VOID : resultType,
+                                Type::getLLVMType(resultType == DATA_TYPE_UNKNOWN ? DATA_TYPE_BYTE : resultType,
                                                   className), 0));
                     } else {
                         variableValue = currentFunction.getValue(token.text);

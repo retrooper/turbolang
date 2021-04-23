@@ -1,6 +1,4 @@
-declare f64 sqrt(f64);
-declare f64 acos(f64);
-
+import "math"
 class Vec3 {
     f64 x;
     f64 y;
