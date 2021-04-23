@@ -23,8 +23,8 @@ i32 main() {
         bool shouldClose = false;
         while (shouldClose == false) {
             glfwPollEvents();
-            i32 temp2 = glfwWindowShouldClose(window);
-            shouldClose = temp2 != 0;
+            temp = glfwWindowShouldClose(window);
+            shouldClose = temp != 0;
         }
         println("Exiting program!");
         glfwDestroyWindow(window);

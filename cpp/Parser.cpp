@@ -575,25 +575,15 @@ namespace turbolang {
 
 
     void Parser::parseVariableModification(const std::optional<Token> &variableNameToken, bool isDereferencing) {
-        std::optional<Token> variableValueToken = expectToken();
-        if (variableValueToken.has_value()) {
-            llvm::Value *val = nullptr;
-            //TODO abstract the SINGLE VALUE to a function called llvm::Value* expectSingleValue();
-            if (variableValueToken.has_value()) {
-                llvm::AllocaInst *allocaInst = currentFunction->getAllocaInst(
-                        variableNameToken.value().text);
-                llvm::Type *allocaType = currentFunction->getType(variableNameToken.value().text);
-                //TODO check if the original variable is signed
-                auto dataType = Type::getType(allocaType, true);
-                if (dataType.has_value()) {
-                    //Handle an expression
-                    std::string className = dataType == DATA_TYPE_CLASS ? allocaType->getStructName().str() : "";
-                    val = expectExpression(dataType.value(), className, &variableValueToken.value());
-                } else {
-                    std::cerr << "Failed to access type of variable you ae trying to modify. Line: " << currentToken->lineNumber << std::endl;
-                    std::exit(-1);
-                }
-            }
+        llvm::AllocaInst *allocaInst = currentFunction->getAllocaInst(
+                variableNameToken.value().text);
+        llvm::Type *allocaType = currentFunction->getType(variableNameToken.value().text);
+        //TODO check if the original variable is signed
+        auto dataType = Type::getType(allocaType, true);
+        if (dataType.has_value()) {
+            //Handle an expression
+            std::string className = dataType == DATA_TYPE_CLASS ? allocaType->getStructName().str() : "";
+            llvm::Value* val = expectExpression(dataType.value(), className);
             if (isDereferencing) {
                 currentFunction->setDereferencedValue(variableNameToken.value().text, val);
             } else {
@@ -602,6 +592,10 @@ namespace turbolang {
             if (!expectTokenType(TOKEN_TYPE_OPERATOR, ";").has_value()) {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
             }
+        } else {
+            std::cerr << "Failed to access type of variable you ae trying to modify. Line: " << currentToken->lineNumber
+                      << std::endl;
+            std::exit(-1);
         }
     }
 
@@ -618,7 +612,6 @@ namespace turbolang {
                     break;
                 }
                 auto parameter = newToken.value();
-                llvm::outs() << "arg: " << parameter.text << "\n";
                 tokens.push_back(parameter);
             }
             auto op = expectTokenType(TOKEN_TYPE_OPERATOR);
@@ -657,7 +650,7 @@ namespace turbolang {
                                              currentFunction->llvmFunction);
 
             auto comp = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(whileLoopValue, llvm::ConstantInt::get(
-                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
+                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)), "EqualComparisonWhileLoopFirst");
             LLVMManager::llvmBytecodeBuilder->CreateCondBr(comp, loop, afterLoop);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(loop);
             currentToken--;
@@ -667,7 +660,7 @@ namespace turbolang {
             whileLoopValue = expectExpression(DATA_TYPE_BOOL, "", nullptr, "{", extraProcessing);
             currentToken = prevCurrentTokenState;
             comp = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(whileLoopValue, llvm::ConstantInt::get(
-                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
+                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)), "EqualComparisonWhileLoopSecond");
 
             LLVMManager::llvmBytecodeBuilder->CreateCondBr(comp, loop, afterLoop);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(afterLoop);
@@ -715,7 +708,7 @@ namespace turbolang {
 
 
             auto comp = LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(statementValue, llvm::ConstantInt::get(
-                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)));
+                    Type::getLLVMType(DATA_TYPE_BOOL), llvm::APInt(1, 1)), "EqualComparisonIfStatement");
             LLVMManager::llvmBytecodeBuilder->CreateCondBr(comp, statement, afterStatement);
             LLVMManager::llvmBytecodeBuilder->SetInsertPoint(statement);
             currentToken--;

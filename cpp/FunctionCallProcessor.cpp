@@ -8,7 +8,14 @@ namespace turbolang {
             std::cerr << "Failed to find function: " << functionName << std::endl;
             std::exit(-1);
         }
-        return LLVMManager::llvmBytecodeBuilder->CreateCall(llvmFunction, arguments);
+        bool isVoid = llvmFunction->getReturnType()->isVoidTy();
+        if (isVoid) {
+            return LLVMManager::llvmBytecodeBuilder->CreateCall(llvmFunction, arguments);
+        }
+        else {
+            return LLVMManager::llvmBytecodeBuilder->CreateCall(llvmFunction, arguments,
+                                                                "function_call_" + functionName);
+        }
     }
 
 }

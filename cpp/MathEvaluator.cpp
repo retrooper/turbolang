@@ -143,46 +143,45 @@ namespace turbolang {
          */
         if (operatorType == "+") {
             if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
-                return LLVMManager::llvmBytecodeBuilder->CreateAdd(a, b);
+                return LLVMManager::llvmBytecodeBuilder->CreateAdd(a, b, "addition");
             } else {
-                return LLVMManager::llvmBytecodeBuilder->CreateFAdd(a, b);
+                return LLVMManager::llvmBytecodeBuilder->CreateFAdd(a, b, "faddition");
             }
         } else if (operatorType == "-") {
             if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
-                return LLVMManager::llvmBytecodeBuilder->CreateSub(a, b);
+                return LLVMManager::llvmBytecodeBuilder->CreateSub(a, b, "subtraction");
             } else {
-                return LLVMManager::llvmBytecodeBuilder->CreateFSub(a, b);
+                return LLVMManager::llvmBytecodeBuilder->CreateFSub(a, b, "fsubtraction");
             }
         } else if (operatorType == "*") {
             if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
-                return LLVMManager::llvmBytecodeBuilder->CreateMul(a, b);
+                return LLVMManager::llvmBytecodeBuilder->CreateMul(a, b, "multiplication");
             } else {
-                return LLVMManager::llvmBytecodeBuilder->CreateFMul(a, b);
+                return LLVMManager::llvmBytecodeBuilder->CreateFMul(a, b, "fmultiplication");
             }
         } else if (operatorType == "/") {
             if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
                 //TODO check if int is signed or unsigned, default to signed for now
-                return LLVMManager::llvmBytecodeBuilder->CreateSDiv(a, b);
+                return LLVMManager::llvmBytecodeBuilder->CreateSDiv(a, b, "division");
             } else {
-                return LLVMManager::llvmBytecodeBuilder->CreateFDiv(a, b);
+                return LLVMManager::llvmBytecodeBuilder->CreateFDiv(a, b, "fdivision");
             }
         }
             /**
              * LANGUAGE OPERATIONS
              */
         else if (operatorType == "==") {
-            llvm::outs() << "first type: " << *a->getType() << ", second: " << *b->getType() << "\n";
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(a, b);
+            return LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(a, b, "equalcheck");
         } else if (operatorType == "!=") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpNE(a, b);
+            return LLVMManager::llvmBytecodeBuilder->CreateICmpNE(a, b, "notequalcheck");
         } else if (operatorType == ">") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpSGT(a, b);
+            return LLVMManager::llvmBytecodeBuilder->CreateICmpSGT(a, b, "greaterthancheck");
         } else if (operatorType == "<") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpSLT(a, b);
+            return LLVMManager::llvmBytecodeBuilder->CreateICmpSLT(a, b, "lessthancheck");
         } else if (operatorType == "<=") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpSLE(a, b);
+            return LLVMManager::llvmBytecodeBuilder->CreateICmpSLE(a, b, "lessthanorequalcheck");
         } else if (operatorType == ">=") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpSGE(a, b);
+            return LLVMManager::llvmBytecodeBuilder->CreateICmpSGE(a, b, "greaterthanorequalcheck");
         }
         return nullptr;
     }
