@@ -575,8 +575,6 @@ namespace turbolang {
 
 
     void Parser::parseVariableModification(const std::optional<Token> &variableNameToken, bool isDereferencing) {
-        llvm::AllocaInst *allocaInst = currentFunction->getAllocaInst(
-                variableNameToken.value().text);
         llvm::Type *allocaType = currentFunction->getType(variableNameToken.value().text);
         //TODO check if the original variable is signed
         auto dataType = Type::getType(allocaType, true);
@@ -593,7 +591,7 @@ namespace turbolang {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
             }
         } else {
-            std::cerr << "Failed to access type of variable you ae trying to modify. Line: " << currentToken->lineNumber
+            std::cerr << "Failed to access type of variable you are trying to modify. Line: " << currentToken->lineNumber
                       << std::endl;
             std::exit(-1);
         }

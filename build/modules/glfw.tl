@@ -21,3 +21,7 @@ declare i32 glfwGetKey(GLFWHandle*, i32);
 declare void glfwGetWindowSize(GLFWHandle*, i32*, i32*);
 declare void glfwSetWindowTitle(GLFWHandle*, i8*);
 declare void glfwGetFramebufferSize(GLFWHandle*, i32*, i32*);
+declare void glfwMakeContextCurrent(GLFWHandle*);
+declare void glfwSwapBuffers(GLFWHandle*);
+declare void glfwSwapInterval(i32);
+declare void glClearColor(f32, f32, f32, f32);

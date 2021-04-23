@@ -161,7 +161,7 @@ namespace turbolang {
 
     std::vector<Function *> Function::getFunctions(const std::string &functionName) {
         std::vector<Function *> validFunctions;
-        for (auto & i : functions) {
+        for (auto &i : functions) {
             Function *function = &i;
             if (function->name == functionName) {
                 validFunctions.push_back(function);

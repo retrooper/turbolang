@@ -4,7 +4,11 @@ namespace turbolang {
     volatile int Builder::tasksFinished = 0;
 
     void Builder::buildExecutables() {
-        std::string additionalArguments = "-lm -lglfw -Ofast";//Ofast is maximum, O0 is none
+        std::vector<std::string> libraries = {"m", "glfw", "OpenGL"};
+        std::string additionalArguments = "-Ofast ";//Ofast is maximum optimizations, O0 is no optimizations
+        for (const std::string& library : libraries) {
+            additionalArguments += "-l" + library + " ";
+        }
         /**
          * LOCAL BINARY FILE
          */

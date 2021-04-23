@@ -70,6 +70,10 @@ namespace turbolang {
     }
 
     std::optional<DataType> Type::getType(const llvm::Type *type, const bool& isSigned) {
+        if (type == nullptr) {
+
+            return std::nullopt;
+        }
         if (llvm::isa<llvm::StructType>(type)) {
             return DATA_TYPE_CLASS;
         }
