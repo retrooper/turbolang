@@ -6,29 +6,10 @@ import "opengl"
 
 void render(GLFWHandle* window) {
     glBegin(4);
-    f32 x1 = -0.5;
-    f32 y1 = -0.5;
-    f32 z1 = 0.0;
-
-    f32 x2 = 0.5;
-    f32 y2 = -0.5;
-    f32 z2 = 0.0;
-
-    f32 x3 = 0.0;
-    f32 y3 = 0.5;
-    f32 z3 = 0.0;
-
-    glVertex3f(x1, y1, z1);
-    glVertex3f(x2, y2, z2);
-    glVertex3f(x3, y3, z3);
-
-    f32 r = 1.0;
-    f32 g = 0.0;
-    f32 b = 0.0;
-    f32 a = 1.0;
-
-    glColor4f(r, g, b, a);
-
+    glVertex3f(-0.5, -0.5, 0);
+    glVertex3f(0.5, -0.5, 0);
+    glVertex3f(0, 0.5, 0);
+    glColor4f(1, 0, 0, 1);
     glEnd();
     glFlush();
 }
@@ -57,18 +38,15 @@ void terminate() {
 i32 main() {
     i32 result = glfwInit();
     if (result != 0) {
-        GLFWHandle* np = nullptr;
-        GLFWHandle* window = glfwCreateWindow(1280, 720, "Hello, World", np, np);
+        GLFWHandle* window = glfwCreateWindow(1280, 720, "Hello, World", nullptr, nullptr);
         glfwMakeContextCurrent(window);
-        f32 rgb = 0.5;
-        f32 alpha = 0.5;
         glfwSwapInterval(1);
-        glClearColor(rgb, rgb, rgb, alpha);
+        glClearColor(0.5, 0.5, 0.5, 1);
         loop(window);
         terminate();
     }
     else {
-        println("Why did GLFW init fail!");
+        println("GLFW failed to initialize!");
         exit(-1);
     }
     return 0;
