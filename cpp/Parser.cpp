@@ -635,7 +635,7 @@ namespace turbolang {
         for (int i = 0; i < llvmFunction->arg_size(); i++) {
             auto argument = arguments[i];
             DataType resultType = DATA_TYPE_UNKNOWN;
-            std::string resultClassName = "";
+            std::string resultClassName;
             auto arg = llvmFunction->getArg(i);
             auto dataTypeOptional = Type::getType(arg->getType(), true);
             resultType = dataTypeOptional.has_value() ? dataTypeOptional.value() : DATA_TYPE_UNKNOWN;

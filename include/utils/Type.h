@@ -12,5 +12,6 @@ namespace turbolang {
         static std::optional<DataType> getType(const llvm::Type* type, const bool& isSigned);
         static int getBitCount(const DataType& type);
         static bool isTypeSigned(const int& type);
+        static bool endsWith(const std::string& value, const std::string& ending);
     };
 }

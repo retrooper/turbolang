@@ -7,9 +7,7 @@ declare i32 gettimeofday(TimeVal*, i8*);
 
 i64 getCurrentTimeMicro() {
     TimeVal tv;
-    TimeVal* tvPtr = &tv;
-    i8* ptr = nullptr;
-    gettimeofday(tvPtr, ptr);
+    gettimeofday(&tv, nullptr);
     i64 tvsec = tv.tv_sec;
     i64 tvusec = tv.tv_usec;
     return tvsec * 1000 + tvusec;

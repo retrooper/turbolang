@@ -80,11 +80,23 @@ namespace turbolang {
             initMap();
         }
 
-        for (const auto& iter : typeMap) {
-            bool sameID = iter.second.type->getTypeID() == (type->isPointerTy() ? type->getPointerElementType()->getTypeID() : type->getTypeID());
-            bool found = sameID && (!iter.second.validSign || iter.second.isSigned == isSigned);
-            if (found) {
-                return static_cast<DataType>(iter.second.index);
+        std::string typeStr;
+        llvm::raw_string_ostream rso(typeStr);
+        type->print(rso);
+        while (endsWith(typeStr, "*")) {
+            typeStr = typeStr.substr(0, typeStr.length() - 1);
+        }
+        if (typeStr == "float") {
+            return DATA_TYPE_FLOAT;
+        }
+        else if (typeStr == "i1") {
+            return DATA_TYPE_BOOL;
+        }
+        else {
+            for (auto iter : typeMap) {
+                if (iter.first == typeStr) {
+                    return static_cast<DataType>(iter.second.index);
+                }
             }
         }
         return std::nullopt;
@@ -107,6 +119,7 @@ namespace turbolang {
             case DATA_TYPE_UNKNOWN:
                 return -1;
             case DATA_TYPE_BOOL:
+                //In memory, its obviously not really one 1 bit. We cannot allocate 1 bit of memory.
                 return 1;
             case DATA_TYPE_BYTE:
                 case DATA_TYPE_UBYTE:
@@ -125,5 +138,11 @@ namespace turbolang {
             case DATA_TYPE_DOUBLE:
                 return 64;
         }
+    }
+
+    bool Type::endsWith(const std::string& value, const std::string& ending)
+    {
+        if (ending.size() > value.size()) return false;
+        return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
     }
 }
