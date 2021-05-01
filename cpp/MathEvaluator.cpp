@@ -177,6 +177,15 @@ namespace turbolang {
              * LANGUAGE OPERATIONS
              */
         else if (operatorType == "==") {
+            if (a->getType()->isPointerTy() && !b->getType()->isPointerTy()) {
+                //CAST B TO POINTER TYPE
+                b = LLVMManager::llvmBytecodeBuilder->CreatePointerCast(b, a->getType(), "PointerCast");
+            }
+            else if (!a->getType()->isPointerTy() && b->getType()->isPointerTy()) {
+                //CAST A TO POINTER TYPE
+                a = LLVMManager::llvmBytecodeBuilder->CreatePointerCast(a, b->getType(), "PointerCast");
+            }
+            llvm::outs() << "op 1 type: " << *a->getType() << ", op 2 type: " << *b->getType() << "\n";
             return LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(a, b, "equalcheck");
         } else if (operatorType == "!=") {
             return LLVMManager::llvmBytecodeBuilder->CreateICmpNE(a, b, "notequalcheck");

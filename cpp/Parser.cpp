@@ -187,7 +187,7 @@ namespace turbolang {
         }
     }
 
-    void Parser::parseModule(std::string& module) {
+    void Parser::parseModule(std::string &module) {
         std::string extension = "tl";
         int dotIndex = module.find('.');
         if (dotIndex == std::string::npos || module.substr(dotIndex) != extension) {
@@ -537,22 +537,17 @@ namespace turbolang {
                 }
 
                 llvm::Type *type = Type::getLLVMType(varType.value(), className);
+                if (isArray) {
+                    type = llvm::ArrayType::get(type, arraySize);
+                    std::cout << "size: " << arraySize << std::endl;
+                }
                 if (isPointer) {
                     type = type->getPointerTo();
                 }
                 llvm::AllocaInst *allocaInst;
-                if (isArray) {
-                    allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type,
-                                                                                llvm::ConstantInt::get(
-                                                                                        Type::getLLVMType(
-                                                                                                DATA_TYPE_INT),
-                                                                                        llvm::APInt(32, arraySize)),
-                                                                                llvm::Twine(varName));
-                } else {
-                    allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type, nullptr,
-                                                                                llvm::Twine(
-                                                                                        varName));
-                }
+                allocaInst = LLVMManager::llvmBytecodeBuilder->CreateAlloca(type,
+                                                                            nullptr,
+                                                                            llvm::Twine(varName));
                 currentFunction->setAllocaInst(
                         varName, allocaInst);
 
@@ -583,12 +578,13 @@ namespace turbolang {
     void Parser::parseVariableModification(const std::optional<Token> &variableNameToken, bool isDereferencing) {
         llvm::Type *allocaType = currentFunction->getType(variableNameToken.value().text);
         //TODO check if the original variable is signed
-        llvm::outs() << "name: " << variableNameToken.value().text << ", allcoa type: " << *allocaType << "\n";
         auto dataType = Type::getType(allocaType, true);
         if (dataType.has_value()) {
             //Handle an expression
-            std::string className = dataType == DATA_TYPE_CLASS ? allocaType->isPointerTy() ? (allocaType->getPointerElementType()->getStructName().str()) : (allocaType->getStructName().str()) : "";
-            llvm::Value* val = expectExpression(dataType.value(), className);
+            std::string className = dataType == DATA_TYPE_CLASS ? allocaType->isPointerTy()
+                                                                  ? (allocaType->getPointerElementType()->getStructName().str())
+                                                                  : (allocaType->getStructName().str()) : "";
+            llvm::Value *val = expectExpression(dataType.value(), className);
             if (isDereferencing) {
                 currentFunction->setDereferencedValue(variableNameToken.value().text, val);
             } else {
@@ -598,7 +594,8 @@ namespace turbolang {
                 throw std::runtime_error("Expected a semicolon in variable modification!");
             }
         } else {
-            std::cerr << "Failed to access type of variable you are trying to modify. Line: " << currentToken->lineNumber
+            std::cerr << "Failed to access type of variable you are trying to modify. Line: "
+                      << currentToken->lineNumber
                       << std::endl;
             std::exit(-1);
         }
@@ -628,25 +625,33 @@ namespace turbolang {
             }
         }
         std::vector<llvm::Value *> llvmFunctionArguments;
-        llvm::Function* llvmFunction = LLVMManager::llvmModule->getFunction(functionName);
-        for (int i = 0; i < arguments.size(); i++) {
+        llvm::Function *llvmFunction = LLVMManager::llvmModule->getFunction(functionName);
+        if (llvmFunction->arg_size() != arguments.size()) {
+            std::cerr << "Failed to call function " << functionName << ", the function is defined with "
+                      << llvmFunction->arg_size() << " arguments, but you are expecting " << arguments.size()
+                      << " arguments!" << std::endl;
+            std::exit(-1);
+        }
+        for (int i = 0; i < llvmFunction->arg_size(); i++) {
             auto argument = arguments[i];
             DataType resultType = DATA_TYPE_UNKNOWN;
             std::string resultClassName = "";
-            if (llvmFunction != nullptr) {
-                auto arg = llvmFunction->getArg(i);
-                auto dataTypeOptional = Type::getType(arg->getType(), true);
-                resultType = dataTypeOptional.has_value() ? dataTypeOptional.value() : DATA_TYPE_UNKNOWN;
-                if (resultType == DATA_TYPE_CLASS) {
-                    resultClassName = arg->getType()->isPointerTy() ? arg->getType()->getPointerElementType()->getStructName().str() : arg->getType()->getStructName().str();
-                }
+            auto arg = llvmFunction->getArg(i);
+            auto dataTypeOptional = Type::getType(arg->getType(), true);
+            resultType = dataTypeOptional.has_value() ? dataTypeOptional.value() : DATA_TYPE_UNKNOWN;
+            if (resultType == DATA_TYPE_CLASS) {
+                resultClassName = arg->getType()->isPointerTy()
+                                  ? arg->getType()->getPointerElementType()->getStructName().str()
+                                  : arg->getType()->getStructName().str();
             }
             //TODO support functions returning custom types
-            llvm::Value *llvmFunctionArgument = MathEvaluator::eval(argument, *currentFunction, resultType, resultClassName);
+            llvm::Value *llvmFunctionArgument = MathEvaluator::eval(argument, *currentFunction, resultType,
+                                                                    resultClassName);
             if (llvmFunctionArgument != nullptr) {
                 llvmFunctionArguments.push_back(llvmFunctionArgument);
             }
         }
+
         return FunctionCallProcessor::process(functionName, llvmFunctionArguments);
     }
 

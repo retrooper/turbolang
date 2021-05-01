@@ -4,7 +4,7 @@ import "system"
 import "glfw"
 import "opengl"
 
-void render(GLFWHandle* window) {
+void render() {
     glBegin(4);
     glVertex3f(-0.5, -0.5, 0);
     glVertex3f(0.5, -0.5, 0);
@@ -25,7 +25,7 @@ void loop(GLFWHandle* window) {
         f32 color = 0.0;
         f32 alpha = 1.0;
         glClearColor(color, color, color, alpha);
-        render(window);
+        render();
         glfwSwapBuffers(window):
         glfwPollEvents();
     }
