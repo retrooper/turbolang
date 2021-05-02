@@ -626,23 +626,29 @@ namespace turbolang {
         }
         std::vector<llvm::Value *> llvmFunctionArguments;
         llvm::Function *llvmFunction = LLVMManager::llvmModule->getFunction(functionName);
-        if (llvmFunction->arg_size() != arguments.size()) {
+        if (llvmFunction == nullptr) {
+            std::cerr << "Failed to find any function named " << functionName << "!\n";
+            std::exit(-1);
+        }
+        if (llvmFunction->arg_size() != arguments.size() && !llvmFunction->isVarArg()) {
             std::cerr << "Failed to call function " << functionName << ", the function is defined with "
                       << llvmFunction->arg_size() << " arguments, but you are expecting " << arguments.size()
                       << " arguments!" << std::endl;
             std::exit(-1);
         }
-        for (int i = 0; i < llvmFunction->arg_size(); i++) {
-            auto argument = arguments[i];
+        for (int i = 0; i < arguments.size(); i++) {
             DataType resultType = DATA_TYPE_UNKNOWN;
             std::string resultClassName;
-            auto arg = llvmFunction->getArg(i);
-            auto dataTypeOptional = Type::getType(arg->getType(), true);
-            resultType = dataTypeOptional.has_value() ? dataTypeOptional.value() : DATA_TYPE_UNKNOWN;
-            if (resultType == DATA_TYPE_CLASS) {
-                resultClassName = arg->getType()->isPointerTy()
-                                  ? arg->getType()->getPointerElementType()->getStructName().str()
-                                  : arg->getType()->getStructName().str();
+            auto argument = arguments[i];
+            if (!llvmFunction->isVarArg() && llvmFunction->arg_size() < i + 1) {
+                auto arg = llvmFunction->getArg(i);
+                auto dataTypeOptional = Type::getType(arg->getType(), true);
+                resultType = dataTypeOptional.has_value() ? dataTypeOptional.value() : DATA_TYPE_UNKNOWN;
+                if (resultType == DATA_TYPE_CLASS) {
+                    resultClassName = arg->getType()->isPointerTy()
+                                      ? arg->getType()->getPointerElementType()->getStructName().str()
+                                      : arg->getType()->getStructName().str();
+                }
             }
             //TODO support functions returning custom types
             llvm::Value *llvmFunctionArgument = MathEvaluator::eval(argument, *currentFunction, resultType,

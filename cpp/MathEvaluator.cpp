@@ -59,16 +59,55 @@ namespace turbolang {
         for (const auto &a : tokens) {
             s += a.text + " ";
         }
-        //llvm::outs() << "Evaluating Expression: " << s << "\n";
+        llvm::outs() << "Evaluating Expression: " << s << "\n";
         if (s.find('*') == 0) {
             //Dereference
             std::string::iterator end_pos = std::remove(s.begin(), s.end(), ' ');
             s.erase(end_pos, s.end());
             return currentFunction.getDereferencedValue(s.substr(1));
         } else if (s.find('&') == 0) {
+            if (tokens.size() > 3 && tokens[1].text == "[" && tokens[tokens.size() - 1].text == "]") {
+                std::string arrayName = tokens[0].text.substr(1);
+                //TODO allow expressions in the []
+                Token innerToken = tokens[2];
+                llvm::AllocaInst *arrayAllocaInst = Parser::currentFunction->getAllocaInst(arrayName);
+                llvm::outs() << " array name: " << arrayName << ", alloca inst type: "
+                             << *(arrayAllocaInst->getAllocatedType()) << "\n";
+                std::vector<Token> tempTokenList;
+                tempTokenList.push_back(innerToken);
+                llvm::Value *llvmIndex = eval(tempTokenList, *Parser::currentFunction, DATA_TYPE_INT);
+                llvm::Value *indices[2] = {
+                        llvm::ConstantInt::get(LLVMManager::llvmBytecodeBuilder->getInt32Ty(), llvm::APInt(32, 0)),
+                        llvmIndex};
+                llvm::Value *ptr = LLVMManager::llvmBytecodeBuilder->CreateInBoundsGEP(arrayAllocaInst,
+                                                                                       llvm::ArrayRef<llvm::Value *>(
+                                                                                               indices, 2),
+                                                                                       "GetArrayElementByIndex");
+                llvm::outs() << "ptr type: " << *(ptr->getType()) << "\n";
+                return ptr;
+            }
             std::string::iterator end_pos = std::remove(s.begin(), s.end(), ' ');
             s.erase(end_pos, s.end());
             return currentFunction.getAllocaInst(s.substr(1));
+        } else if (tokens.size() > 2 && tokens[1].text == "[" && tokens[tokens.size() - 1].text == "]") {
+            std::string arrayName = tokens[0].text;
+            //TODO allow expressions in the []
+            Token innerToken = tokens[2];
+            llvm::AllocaInst *arrayAllocaInst = Parser::currentFunction->getAllocaInst(arrayName);
+            llvm::outs() << " array name: " << arrayName << ", alloca inst type: "
+                         << *(arrayAllocaInst->getAllocatedType()) << "\n";
+            std::vector<Token> tempTokenList;
+            tempTokenList.push_back(innerToken);
+            llvm::Value *llvmIndex = eval(tempTokenList, *Parser::currentFunction, DATA_TYPE_INT);
+            llvm::Value *indices[2] = {
+                    llvm::ConstantInt::get(LLVMManager::llvmBytecodeBuilder->getInt32Ty(), llvm::APInt(32, 0)),
+                    llvmIndex};
+            llvm::Value *ptr = LLVMManager::llvmBytecodeBuilder->CreateInBoundsGEP(arrayAllocaInst,
+                                                                                   llvm::ArrayRef<llvm::Value *>(
+                                                                                           indices, 2),
+                                                                                   "GetArrayElementByIndex");
+            llvm::outs() << "ptr type: " << *(ptr->getType()) << "\n";
+            return LLVMManager::llvmBytecodeBuilder->CreateLoad(ptr, "LoadArrayPtr");
         }
         Token firstParenthesis;
         firstParenthesis.text = "(";
@@ -88,18 +127,17 @@ namespace turbolang {
             switch (token.type) {
                 case TOKEN_TYPE_INTEGER_LITERAL:
                     resultType = resultType == DATA_TYPE_UNKNOWN
-                            || resultType == DATA_TYPE_BOOL
-                            ? DATA_TYPE_INT : resultType;
-                   if (resultType == DATA_TYPE_FLOAT
-                   || resultType == DATA_TYPE_DOUBLE) {
-                       stack.push_back(llvm::ConstantFP::get(Type::getLLVMType(resultType), std::stod(token.text)));
-                   }
-                   else {
-                       stack.push_back(llvm::ConstantInt::get(
-                               Type::getLLVMType(resultType),
-                               llvm::APInt(Type::getBitCount(resultType),
-                                           std::stoi(token.text))));
-                   }
+                                 || resultType == DATA_TYPE_BOOL
+                                 ? DATA_TYPE_INT : resultType;
+                    if (resultType == DATA_TYPE_FLOAT
+                        || resultType == DATA_TYPE_DOUBLE) {
+                        stack.push_back(llvm::ConstantFP::get(Type::getLLVMType(resultType), std::stod(token.text)));
+                    } else {
+                        stack.push_back(llvm::ConstantInt::get(
+                                Type::getLLVMType(resultType),
+                                llvm::APInt(Type::getBitCount(resultType),
+                                            std::stoi(token.text))));
+                    }
                     break;
                 case TOKEN_TYPE_DOUBLE_LITERAL:
                     resultType = resultType == DATA_TYPE_UNKNOWN
@@ -180,8 +218,7 @@ namespace turbolang {
             if (a->getType()->isPointerTy() && !b->getType()->isPointerTy()) {
                 //CAST B TO POINTER TYPE
                 b = LLVMManager::llvmBytecodeBuilder->CreatePointerCast(b, a->getType(), "PointerCast");
-            }
-            else if (!a->getType()->isPointerTy() && b->getType()->isPointerTy()) {
+            } else if (!a->getType()->isPointerTy() && b->getType()->isPointerTy()) {
                 //CAST A TO POINTER TYPE
                 a = LLVMManager::llvmBytecodeBuilder->CreatePointerCast(a, b->getType(), "PointerCast");
             }

@@ -15,6 +15,7 @@
 namespace turbolang {
     class Parser {
         friend class Compiler;
+        friend class MathEvaluator;
     public:
         static void parse(std::vector<Token> &tokens);
     private:

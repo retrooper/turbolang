@@ -129,13 +129,11 @@ namespace turbolang {
                 return 16;
             case DATA_TYPE_INT:
             case DATA_TYPE_UINT:
+            case DATA_TYPE_FLOAT:
                 return 32;
             case DATA_TYPE_LONG:
             case DATA_TYPE_ULONG:
-                return 64;
-            case DATA_TYPE_FLOAT:
-                return 32;
-            case DATA_TYPE_DOUBLE:
+                case DATA_TYPE_DOUBLE:
                 return 64;
         }
     }
