@@ -640,7 +640,7 @@ namespace turbolang {
             DataType resultType = DATA_TYPE_UNKNOWN;
             std::string resultClassName;
             auto argument = arguments[i];
-            if (!llvmFunction->isVarArg() && llvmFunction->arg_size() < i + 1) {
+            if (!llvmFunction->isVarArg() /*&& llvmFunction->arg_size() <= i + 1*/) {
                 auto arg = llvmFunction->getArg(i);
                 auto dataTypeOptional = Type::getType(arg->getType(), true);
                 resultType = dataTypeOptional.has_value() ? dataTypeOptional.value() : DATA_TYPE_UNKNOWN;

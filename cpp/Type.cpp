@@ -89,6 +89,9 @@ namespace turbolang {
         if (typeStr == "float") {
             return DATA_TYPE_FLOAT;
         }
+        else if (typeStr == "double") {
+            return DATA_TYPE_DOUBLE;
+        }
         else if (typeStr == "i1") {
             return DATA_TYPE_BOOL;
         }
@@ -99,6 +102,7 @@ namespace turbolang {
                 }
             }
         }
+        llvm::outs() << "unknown type, please support: " << typeStr << "\n";
         return std::nullopt;
     }
 

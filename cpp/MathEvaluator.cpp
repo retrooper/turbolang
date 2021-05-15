@@ -213,6 +213,7 @@ namespace turbolang {
         }
             /**
              * LANGUAGE OPERATIONS
+             * TODO SUPPORT UNSIGNED TYPES
              */
         else if (operatorType == "==") {
             if (a->getType()->isPointerTy() && !b->getType()->isPointerTy()) {
@@ -222,20 +223,47 @@ namespace turbolang {
                 //CAST A TO POINTER TYPE
                 a = LLVMManager::llvmBytecodeBuilder->CreatePointerCast(a, b->getType(), "PointerCast");
             }
-            llvm::outs() << "op 1 type: " << *a->getType() << ", op 2 type: " << *b->getType() << "\n";
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(a, b, "equalcheck");
+
+            if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
+                return LLVMManager::llvmBytecodeBuilder->CreateICmpEQ(a, b, "iequalcheck");
+            } else {
+                return LLVMManager::llvmBytecodeBuilder->CreateFCmpOEQ(a, b, "fequalcheck");
+            }
         } else if (operatorType == "!=") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpNE(a, b, "notequalcheck");
+            if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
+                return LLVMManager::llvmBytecodeBuilder->CreateICmpNE(a, b, "inotequalcheck");
+            } else {
+                return LLVMManager::llvmBytecodeBuilder->CreateFCmpONE(a, b, "fnotequalcheck");
+            }
         } else if (operatorType == ">") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpSGT(a, b, "greaterthancheck");
+            if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
+                return LLVMManager::llvmBytecodeBuilder->CreateICmpSGT(a, b, "igreaterthancheck");
+            } else {
+                return LLVMManager::llvmBytecodeBuilder->CreateFCmpOGT(a, b, "fgreaterthancheck");
+            }
         } else if (operatorType == "<") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpSLT(a, b, "lessthancheck");
+            if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
+                return LLVMManager::llvmBytecodeBuilder->CreateICmpSLT(a, b, "ilessthancheck");
+            } else {
+                return LLVMManager::llvmBytecodeBuilder->CreateFCmpOLT(a, b, "flessthancheck");
+            }
         } else if (operatorType == "<=") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpSLE(a, b, "lessthanorequalcheck");
+            if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
+                return LLVMManager::llvmBytecodeBuilder->CreateICmpSLE(a, b, "ilessthanorequalcheck");
+            }
+            else {
+                return LLVMManager::llvmBytecodeBuilder->CreateFCmpOLE(a, b, "flessthanorequalcheck");
+            }
         } else if (operatorType == ">=") {
-            return LLVMManager::llvmBytecodeBuilder->CreateICmpSGE(a, b, "greaterthanorequalcheck");
+                if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
+                    return LLVMManager::llvmBytecodeBuilder->CreateICmpSGE(a, b, "igreaterthanorequalcheck");
+                }
+                else {
+                    return LLVMManager::llvmBytecodeBuilder->CreateFCmpOGE(a, b, "fgreaterthanorequalcheck");
+                }
+        } else {
+            return nullptr;
         }
-        return nullptr;
     }
 
     bool MathEvaluator::isOperator(const turbolang::Token &token) {
