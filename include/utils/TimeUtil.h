@@ -6,6 +6,8 @@
 namespace turbolang {
     long getCurrentNanoTime();
 
+    long getCurrentMicroTime();
+
     long getCurrentMillisTime();
 
     long getCurrentSecondsTime();

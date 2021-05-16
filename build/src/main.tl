@@ -1,6 +1,6 @@
-import "io"
-import "thread"
 i32 main() {
-    println("Hello, World!");
+
+#fix daytime client, it just gives us data in some unknown format.
+#what is echo_server even doing lfmao
     return 0;
 }

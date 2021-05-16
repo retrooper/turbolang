@@ -12,8 +12,7 @@ namespace turbolang {
         }
         if (!libraries.empty()) {
             result = result.substr(2);
-        }
-        else {
+        } else {
             result = "None";
         }
         LOG_INFO("Linking against C libraries: " << result);
@@ -22,6 +21,7 @@ namespace turbolang {
         for (const std::string &library : libraries) {
             additionalArguments += "-l" + library + " ";
         }
+        additionalArguments += "dyad.o";
         /**
          * LOCAL BINARY FILE
          */
@@ -39,6 +39,7 @@ namespace turbolang {
          */
 
         //Cross compile for Windows
+        /*
         auto windowsPath = basePath + "/executables/windows";
         std::filesystem::current_path(windowsPath);
         //x86 Windows
@@ -95,22 +96,22 @@ namespace turbolang {
             std::system(command.c_str());
             tasksFinished++;
         });
-
-        int totalTasks = 6;//6 threads we just created...
+    */
+        int totalTasks = 0;//6 threads we just created...
         while (tasksFinished < totalTasks) { ;
         }
         /**
          * Ensure we don't interrupt them. They MUST
          */
         //WINDOWS
-        x86WindowsThread.join();
-        x64WindowsThread.join();
+        // x86WindowsThread.join();
+        // x64WindowsThread.join();
         //LINUX
-        x86LinuxThread.join();
-        x64LinuxThread.join();
+        // x86LinuxThread.join();
+        // x64LinuxThread.join();
         //MACOS
-        arm64MacosThread.join();
-        arm64eMacosThread.join();
+        // arm64MacosThread.join();
+        // arm64eMacosThread.join();
         //We can go back to the base path.
         std::filesystem::current_path(basePath);
     }

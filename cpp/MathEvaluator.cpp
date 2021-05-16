@@ -156,7 +156,13 @@ namespace turbolang {
                         variableValue = currentFunction.getValue(token.text);
                         if (variableValue == nullptr) {
                             //Check for function
-                            variableValue = LLVMManager::llvmBytecodeBuilder->CreatePointerCast(LLVMManager::llvmModule->getFunction(token.text),
+                            llvm::Function *func = LLVMManager::llvmModule->getFunction(token.text);
+                            if (func == nullptr) {
+                                LOG_ERROR("Variable or Function pointer by name: " << token.text << " at line "
+                                                                                   << token.lineNumber
+                                                                                   << " not found!");
+                            }
+                            variableValue = LLVMManager::llvmBytecodeBuilder->CreatePointerCast(func,
                                                                                                 LLVMManager::llvmBytecodeBuilder->getInt8PtrTy());
                         }
                     }
@@ -249,17 +255,15 @@ namespace turbolang {
         } else if (operatorType == "<=") {
             if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
                 return LLVMManager::llvmBytecodeBuilder->CreateICmpSLE(a, b, "ilessthanorequalcheck");
-            }
-            else {
+            } else {
                 return LLVMManager::llvmBytecodeBuilder->CreateFCmpOLE(a, b, "flessthanorequalcheck");
             }
         } else if (operatorType == ">=") {
-                if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
-                    return LLVMManager::llvmBytecodeBuilder->CreateICmpSGE(a, b, "igreaterthanorequalcheck");
-                }
-                else {
-                    return LLVMManager::llvmBytecodeBuilder->CreateFCmpOGE(a, b, "fgreaterthanorequalcheck");
-                }
+            if (a->getType()->isIntegerTy() && b->getType()->isIntegerTy()) {
+                return LLVMManager::llvmBytecodeBuilder->CreateICmpSGE(a, b, "igreaterthanorequalcheck");
+            } else {
+                return LLVMManager::llvmBytecodeBuilder->CreateFCmpOGE(a, b, "fgreaterthanorequalcheck");
+            }
         } else {
             return nullptr;
         }

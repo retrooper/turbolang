@@ -17,30 +17,30 @@ void run() {
     }
     Logger::mode = LOG_MODE_WARNING;
     LLVMManager::init();
-    long start = turbolang::getCurrentNanoTime();
+    long start = turbolang::getCurrentMicroTime();
     std::vector<Token> tokens = Tokenizer::tokenize(code);
-    long end = turbolang::getCurrentNanoTime();
+    long end = turbolang::getCurrentMicroTime();
     for (const auto &t : tokens) {
         t.debug();
     }
-    LOG_WARN("TurboLang took " << (end - start) << " nanoseconds to tokenize the source code!");
-    start = turbolang::getCurrentNanoTime();
+    LOG_WARN("TurboLang took " << (end - start) << " microseconds to tokenize the source code!");
+    start = turbolang::getCurrentMicroTime();
     Parser::parse(tokens);
-    end = getCurrentNanoTime();
-    LOG_WARN("TurboLang took " << (end - start) << " nanoseconds to parse the tokens!");
-    start = getCurrentNanoTime();
+    end = getCurrentMicroTime();
+    LOG_WARN("TurboLang took " << (end - start) << " microseconds to parse the tokens!");
+    start = getCurrentMicroTime();
     Compiler::generateBytecode();
     LLVMManager::destroy();
     end = getCurrentNanoTime();
-    LOG_WARN("TurboLang took " << (end - start) << " nanoseconds to generate bytecode!");
-    start = getCurrentNanoTime();
+    LOG_WARN("TurboLang took " << (end - start) << " microseconds to generate bytecode!");
+    start = getCurrentMicroTime();
     Builder::buildExecutables();
-    end = getCurrentNanoTime();
-    LOG_WARN("Clang took " << (end - start) << " nanoseconds to build the executables for all platforms.");
+    end = getCurrentMicroTime();
+    LOG_WARN("Clang took " << (end - start) << " microseconds to build the executables for all platforms.");
     LOG_WARN("Executing in 5 seconds...");
+    LOG_WARN("-");
     auto sleepTime = std::chrono::seconds(5);
     std::this_thread::sleep_for(sleepTime);
-    LOG_WARN("");
     //Execute the generated binary
     std::system("./binary/output.out");
 }
