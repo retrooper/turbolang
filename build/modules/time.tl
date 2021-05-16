@@ -1,3 +1,5 @@
+link "m"
+
 class TimeVal {
     i64 tv_sec;
     i64 tv_usec;

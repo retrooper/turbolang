@@ -1,3 +1,5 @@
+link "OpenGL"
+
 #Actually unsigned i32, but TODO change
 declare void glClear(i32);
 #ALSO UNSIGNED I32

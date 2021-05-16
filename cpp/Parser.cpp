@@ -18,7 +18,13 @@ namespace turbolang {
                 currentToken++;
                 parseFunctionDeclareStatement();
                 continue;
-            } else if (currentToken->type == TOKEN_TYPE_CLASS) {
+            }
+            else if (currentToken->type == TOKEN_TYPE_LINK) {
+                currentToken++;
+                parseLinkStatement();
+                continue;
+            }
+            else if (currentToken->type == TOKEN_TYPE_CLASS) {
                 currentToken++;
                 parseClassDefinition();
                 continue;
@@ -184,6 +190,18 @@ namespace turbolang {
                     }
                 }
             }
+        }
+    }
+
+    void Parser::parseLinkStatement() {
+        auto libraryToken = expectTokenType(TOKEN_TYPE_STRING_LITERAL);
+        if (libraryToken.has_value()) {
+            std::string libraryName = libraryToken.value().text;
+            Builder::libraries.push_back(libraryName);
+        }
+        else {
+            std::cerr << "Expected a library name to link against! For example: link \"pthread\"" << std::endl;
+            std::exit(-1);
         }
     }
 

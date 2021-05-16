@@ -80,6 +80,9 @@ namespace turbolang {
         if (pointerValue) {
             return allocaInst;
         } else {
+            if (allocaInst == nullptr) {
+                return nullptr;
+            }
             return LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst, name.substr(1));
         }
     }

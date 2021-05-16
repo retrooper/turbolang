@@ -1,3 +1,5 @@
+link "glfw"
+
 class GLFWHandle {
 
 }

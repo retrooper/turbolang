@@ -160,6 +160,11 @@ namespace turbolang {
                                                   className), 0));
                     } else {
                         variableValue = currentFunction.getValue(token.text);
+                        if (variableValue == nullptr) {
+                            //Check for function
+                            variableValue = LLVMManager::llvmBytecodeBuilder->CreatePointerCast(LLVMManager::llvmModule->getFunction(token.text),
+                                                                                                LLVMManager::llvmBytecodeBuilder->getInt8PtrTy());
+                        }
                     }
                     stack.push_back(variableValue);
                     break;

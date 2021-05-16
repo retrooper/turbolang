@@ -11,6 +11,7 @@ namespace turbolang {
          */
         TOKEN_TYPE_CLASS,
         TOKEN_TYPE_DECLARE,
+        TOKEN_TYPE_LINK,
         TOKEN_TYPE_IMPORT,
         TOKEN_TYPE_RETURN,
         TOKEN_TYPE_WHILE,

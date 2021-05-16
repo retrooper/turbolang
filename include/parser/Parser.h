@@ -9,6 +9,7 @@
 #include "utils/DataType.h"
 #include "utils/SourceCodeReader.h"
 #include "math/MathEvaluator.h"
+#include "builder/Builder.h"
 #include <vector>
 #include <stack>
 #include <functional>
@@ -40,6 +41,8 @@ namespace turbolang {
         static void parseStatement();
 
         static void parseFunctionDeclareStatement();
+
+        static void parseLinkStatement();
 
         static void parseModule(std::string& module);
         static void parseImportStatement();

@@ -1,12 +1,25 @@
 #include "builder/Builder.h"
+
 namespace turbolang {
     volatile int Builder::tasksFinished = 0;
+    std::vector<std::string> Builder::libraries;
 
     void Builder::buildExecutables() {
-        //UNKNOWN, GLFW, OpenGL, GLib
-        std::vector<std::string> libraries = {"m", "glfw", "OpenGL", "glib-2.0"};
+        std::string result;
+        //TODO remove duplicate libraries
+        for (auto const &s : libraries) {
+            result += ", " + s;
+        }
+        if (!libraries.empty()) {
+            result = result.substr(2);
+        }
+        else {
+            result = "None";
+        }
+        std::cout << "Linking against C libraries: " << result << std::endl;
         std::string additionalArguments = "-Ofast ";//Ofast is maximum optimizations, O0 is no optimizations
-        for (const std::string& library : libraries) {
+        //TODO remove duplicate libraries
+        for (const std::string &library : libraries) {
             additionalArguments += "-l" + library + " ";
         }
         /**
@@ -17,7 +30,7 @@ namespace turbolang {
 
         std::string binaryPath = basePath + "/binary";
         std::filesystem::current_path(binaryPath);
-        std::system((std::string("clang ../bytecode/output.ll -o output.out ")  + additionalArguments).c_str());
+        std::system((std::string("clang ../bytecode/output.ll -o output.out ") + additionalArguments).c_str());
         std::filesystem::current_path(basePath);
 
         tasksFinished = 0;
@@ -84,8 +97,7 @@ namespace turbolang {
         });
 
         int totalTasks = 6;//6 threads we just created...
-        while (tasksFinished < totalTasks) {
-            ;
+        while (tasksFinished < totalTasks) { ;
         }
         /**
          * Ensure we don't interrupt them. They MUST

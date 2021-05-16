@@ -193,6 +193,9 @@ namespace turbolang {
                 else if (token->text == "declare") {
                     token->type = TOKEN_TYPE_DECLARE;
                 }
+                else if (token->text == "link") {
+                    token->type = TOKEN_TYPE_LINK;
+                }
                 else if (token->text == "import") {
                     token->type = TOKEN_TYPE_IMPORT;
                 }
