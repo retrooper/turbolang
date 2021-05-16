@@ -6,7 +6,6 @@ namespace turbolang {
         struct Token currentToken;
         currentToken.lineNumber = 1;
         for (char currChar : code) {
-            bool runningOp = false;
             if (currentToken.type == TOKEN_TYPE_STRING_ESCAPE_SEQUENCE) {
                 switch (currChar) {
                     case 'n':
@@ -153,7 +152,7 @@ namespace turbolang {
 
         std::vector<Token> finalTokens;
         std::string lastOperator;
-        for (Token& token : tokens) {
+        for (Token &token : tokens) {
             if (token.type == TOKEN_TYPE_OPERATOR || token.type == TOKEN_TYPE_POTENTIAL_OPERATOR) {
                 token.type = TOKEN_TYPE_OPERATOR;
                 if (MathEvaluator::operatorPrecedenceMap.find(lastOperator + token.text) !=
@@ -189,14 +188,11 @@ namespace turbolang {
                     token->type = TOKEN_TYPE_ELSE_IF;
                 } else if (token->text == "else") {
                     token->type = TOKEN_TYPE_ELSE;
-                }
-                else if (token->text == "declare") {
+                } else if (token->text == "declare") {
                     token->type = TOKEN_TYPE_DECLARE;
-                }
-                else if (token->text == "link") {
+                } else if (token->text == "link") {
                     token->type = TOKEN_TYPE_LINK;
-                }
-                else if (token->text == "import") {
+                } else if (token->text == "import") {
                     token->type = TOKEN_TYPE_IMPORT;
                 }
             }
@@ -214,8 +210,8 @@ namespace turbolang {
     }
 
     void Token::debug() const {
-        std::cout << "DEBUG TYPE: " << TOKEN_TYPE_STRINGS[type] << ", Text: " << text << ", at line number: "
-                  << lineNumber << std::endl;
+        LOG_INFO(
+                "TOKEN TYPE: " << TOKEN_TYPE_STRINGS[type] << ", Text: " << text << ", at line number: " << lineNumber);
     }
 
 }

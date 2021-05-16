@@ -557,7 +557,6 @@ namespace turbolang {
                 llvm::Type *type = Type::getLLVMType(varType.value(), className);
                 if (isArray) {
                     type = llvm::ArrayType::get(type, arraySize);
-                    std::cout << "size: " << arraySize << std::endl;
                 }
                 if (isPointer) {
                     type = type->getPointerTo();

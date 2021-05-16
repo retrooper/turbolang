@@ -102,7 +102,7 @@ namespace turbolang {
                 }
             }
         }
-        llvm::outs() << "unknown type, please support: " << typeStr << "\n";
+        LOG_ERROR("Unknown type by the name " << typeStr << ", please support it!");
         return std::nullopt;
     }
 

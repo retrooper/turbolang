@@ -16,7 +16,7 @@ namespace turbolang {
         else {
             result = "None";
         }
-        std::cout << "Linking against C libraries: " << result << std::endl;
+        LOG_INFO("Linking against C libraries: " << result);
         std::string additionalArguments = "-Ofast ";//Ofast is maximum optimizations, O0 is no optimizations
         //TODO remove duplicate libraries
         for (const std::string &library : libraries) {

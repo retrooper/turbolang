@@ -59,7 +59,7 @@ namespace turbolang {
         for (const auto &a : tokens) {
             s += a.text + " ";
         }
-        llvm::outs() << "Evaluating Expression: " << s << "\n";
+        LOG_INFO("Evaluating Expression: " << s);
         if (s.find('*') == 0) {
             //Dereference
             std::string::iterator end_pos = std::remove(s.begin(), s.end(), ' ');
@@ -71,8 +71,6 @@ namespace turbolang {
                 //TODO allow expressions in the []
                 Token innerToken = tokens[2];
                 llvm::AllocaInst *arrayAllocaInst = Parser::currentFunction->getAllocaInst(arrayName);
-                llvm::outs() << " array name: " << arrayName << ", alloca inst type: "
-                             << *(arrayAllocaInst->getAllocatedType()) << "\n";
                 std::vector<Token> tempTokenList;
                 tempTokenList.push_back(innerToken);
                 llvm::Value *llvmIndex = eval(tempTokenList, *Parser::currentFunction, DATA_TYPE_INT);
@@ -83,7 +81,6 @@ namespace turbolang {
                                                                                        llvm::ArrayRef<llvm::Value *>(
                                                                                                indices, 2),
                                                                                        "GetArrayElementByIndex");
-                llvm::outs() << "ptr type: " << *(ptr->getType()) << "\n";
                 return ptr;
             }
             std::string::iterator end_pos = std::remove(s.begin(), s.end(), ' ');
@@ -94,8 +91,6 @@ namespace turbolang {
             //TODO allow expressions in the []
             Token innerToken = tokens[2];
             llvm::AllocaInst *arrayAllocaInst = Parser::currentFunction->getAllocaInst(arrayName);
-            llvm::outs() << " array name: " << arrayName << ", alloca inst type: "
-                         << *(arrayAllocaInst->getAllocatedType()) << "\n";
             std::vector<Token> tempTokenList;
             tempTokenList.push_back(innerToken);
             llvm::Value *llvmIndex = eval(tempTokenList, *Parser::currentFunction, DATA_TYPE_INT);
@@ -106,7 +101,6 @@ namespace turbolang {
                                                                                    llvm::ArrayRef<llvm::Value *>(
                                                                                            indices, 2),
                                                                                    "GetArrayElementByIndex");
-            llvm::outs() << "ptr type: " << *(ptr->getType()) << "\n";
             return LLVMManager::llvmBytecodeBuilder->CreateLoad(ptr, "LoadArrayPtr");
         }
         Token firstParenthesis;

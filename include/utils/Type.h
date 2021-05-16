@@ -2,6 +2,7 @@
 #include "utils/llvm/LLVMManager.h"
 #include "DataType.h"
 #include "class/Class.h"
+#include "utils/Logger.h"
 #include <functional>
 #include <optional>
 namespace turbolang {

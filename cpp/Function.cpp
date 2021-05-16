@@ -97,7 +97,6 @@ namespace turbolang {
             llvm::AllocaInst *allocaInst = allocaMap[tokens[0]];
             llvm::Value *instance = LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst);
             auto *structType = (llvm::StructType *) allocaInst->getAllocatedType();
-            llvm::outs() << "Class name: " << structType->getName().str() << "\n";
             Class clazz = Class::classMap[structType->getName().str()];
             unsigned int memberIndex = clazz.getMemberIndex(tokens[1]);
             llvm::AllocaInst *ptr = (llvm::AllocaInst *) LLVMManager::llvmBytecodeBuilder->CreateStructGEP(instance,

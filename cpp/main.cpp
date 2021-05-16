@@ -5,6 +5,7 @@
 #include "builder/Builder.h"
 #include "parser/Parser.h"
 #include "utils/SourceCodeReader.h"
+#include "utils/Logger.h"
 #include <iostream>
 using namespace turbolang;
 void run() {
@@ -14,6 +15,7 @@ void run() {
     if (SourceCodeReader::readAndFilterCode(sourceFile, &code) == SOURCE_READER_RESULT_FAILURE) {
         throw std::runtime_error("Failed to read and filter source code!");
     }
+    Logger::mode = LOG_MODE_WARNING;
     LLVMManager::init();
     long start = turbolang::getCurrentNanoTime();
     std::vector<Token> tokens = Tokenizer::tokenize(code);
@@ -21,31 +23,26 @@ void run() {
     for (const auto &t : tokens) {
         t.debug();
     }
-    std::cout << "TurboLang took " << (end - start)
-              << " nanoseconds to tokenize the source code!" << std::endl;
+    LOG_WARN("TurboLang took " << (end - start) << " nanoseconds to tokenize the source code!");
     start = turbolang::getCurrentNanoTime();
     Parser::parse(tokens);
     end = getCurrentNanoTime();
-    std::cout << "TurboLang took " << (end - start)
-              << " nanoseconds to parse the tokens!" << std::endl;
+    LOG_WARN("TurboLang took " << (end - start) << " nanoseconds to parse the tokens!");
     start = getCurrentNanoTime();
     Compiler::generateBytecode();
     LLVMManager::destroy();
     end = getCurrentNanoTime();
-    std::cout << "TurboLang took " << (end - start) << " nanoseconds to generate bytecode!"
-              << std::endl;
+    LOG_WARN("TurboLang took " << (end - start) << " nanoseconds to generate bytecode!");
     start = getCurrentNanoTime();
     Builder::buildExecutables();
     end = getCurrentNanoTime();
-    std::cout << "Clang took " << (end - start) << " nanoseconds to build the executables for all platforms."
-              << std::endl;
-    std::cout << "Executing in 5 seconds..." << std::endl;
+    LOG_WARN("Clang took " << (end - start) << " nanoseconds to build the executables for all platforms.");
+    LOG_WARN("Executing in 5 seconds...");
     auto sleepTime = std::chrono::seconds(5);
     std::this_thread::sleep_for(sleepTime);
-    std::cout << std::endl;
+    LOG_WARN("");
     //Execute the generated binary
     std::system("./binary/output.out");
-    std::cout << std::endl;
 }
 
 int main() {

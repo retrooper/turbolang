@@ -6,6 +6,7 @@
 #include <stack>
 #include <vector>
 #include "parser/Parser.h"
+#include "utils/Logger.h"
 namespace turbolang {
     class MathEvaluator {
         friend class Tokenizer;

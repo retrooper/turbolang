@@ -12,12 +12,6 @@ namespace turbolang {
     void FunctionInternal::defineFunction(const std::string &functionName, llvm::Type *returnType,
                                           std::vector<llvm::Type *> &argumentTypes, bool argumentSizeConstant) {
 
-        if (functionName == "clock_gettime") {
-            llvm::outs() << "arg types: " << argumentTypes.size() << " from name: " << functionName << "\n";
-            for (auto arg : argumentTypes) {
-                llvm::outs() << "ARG: " << *arg << "\n";
-            }
-        }
         llvm::FunctionType *functionType =
                 llvm::FunctionType::get(returnType, argumentTypes, !argumentSizeConstant);
         llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, functionName, LLVMManager::llvmModule);
