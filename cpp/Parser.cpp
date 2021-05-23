@@ -18,13 +18,11 @@ namespace turbolang {
                 currentToken++;
                 parseFunctionDeclareStatement();
                 continue;
-            }
-            else if (currentToken->type == TOKEN_TYPE_LINK) {
+            } else if (currentToken->type == TOKEN_TYPE_LINK) {
                 currentToken++;
                 parseLinkStatement();
                 continue;
-            }
-            else if (currentToken->type == TOKEN_TYPE_CLASS) {
+            } else if (currentToken->type == TOKEN_TYPE_CLASS) {
                 currentToken++;
                 parseClassDefinition();
                 continue;
@@ -52,10 +50,14 @@ namespace turbolang {
                     //Variable declaration
                     auto dataTypeIdentifier = expectTokenType(TOKEN_TYPE_IDENTIFIER);
                     if (dataTypeIdentifier.has_value()) {
-                        auto potentialNextToken = expectTokenType(TOKEN_TYPE_OPERATOR, "*");
-                        bool isPointer = false;
-                        if (potentialNextToken.has_value()) {
-                            isPointer = true;
+                        uint32_t pointerCount = 0;
+                        while (true) {
+                            auto potentialNextToken = expectTokenType(TOKEN_TYPE_OPERATOR, "*");
+                            if (potentialNextToken.has_value()) {
+                                pointerCount++;
+                            } else {
+                                break;
+                            }
                         }
                         auto dataType = Type::getType(dataTypeIdentifier.value().text);
                         auto variableName = expectTokenType(TOKEN_TYPE_IDENTIFIER);
@@ -66,9 +68,11 @@ namespace turbolang {
                                 clsMemberData.type = Type::getLLVMType(dataType.value(),
                                                                        dataTypeIdentifier.value().text);
                                 clsMemberData.isSigned = Type::isTypeSigned(dataType.value());
-                                if (isPointer) {
-                                    clsMemberData.type = clsMemberData.type->getPointerTo();
+                                llvm::Type *type = clsMemberData.type;
+                                for (uint32_t i = 0; i < pointerCount; i++) {
+                                    type = type->getPointerTo();
                                 }
+                                clsMemberData.type = type;
                                 clazz.clsMemberData.push_back(clsMemberData);
                                 members.push_back(clsMemberData.type);
                             } else {
@@ -132,23 +136,24 @@ namespace turbolang {
                                 } else {
                                     nextToken = expectTokenType(TOKEN_TYPE_IDENTIFIER);
                                     if (nextToken.has_value()) {
-                                        bool isArgPointer = false;
-                                        potentialNextToken = expectTokenType(TOKEN_TYPE_OPERATOR, "*");
-                                        if (potentialNextToken.has_value()) {
-                                            isArgPointer = true;
+                                        uint32_t pointerCount = 0;
+                                        while (true) {
+                                            potentialNextToken = expectTokenType(TOKEN_TYPE_OPERATOR, "*");
+                                            if (potentialNextToken.has_value()) {
+                                                pointerCount++;
+                                            } else {
+                                                break;
+                                            }
                                         }
                                         functionTypeOptional = Type::getType(nextToken.value().text);
                                         if (functionTypeOptional.has_value()) {
                                             auto functionArgumentType = functionTypeOptional.value();
-                                            if (isArgPointer) {
-                                                functionArgumentTypes.push_back(
-                                                        Type::getLLVMType(functionArgumentType,
-                                                                          nextToken.value().text)->getPointerTo());
-                                            } else {
-                                                functionArgumentTypes.push_back(
-                                                        Type::getLLVMType(functionArgumentType,
-                                                                          nextToken.value().text));
+                                            llvm::Type *type = Type::getLLVMType(functionArgumentType,
+                                                                                 nextToken.value().text);
+                                            for (uint32_t i = 0; i < pointerCount; i++) {
+                                                type = type->getPointerTo();
                                             }
+                                            functionArgumentTypes.push_back(type);
                                             expectingComma = true;
                                             continue;
                                         } else {
@@ -198,8 +203,7 @@ namespace turbolang {
         if (libraryToken.has_value()) {
             std::string libraryName = libraryToken.value().text;
             Builder::libraries.push_back(libraryName);
-        }
-        else {
+        } else {
             std::cerr << "Expected a library name to link against! For example: link \"pthread\"" << std::endl;
             std::exit(-1);
         }
@@ -581,6 +585,13 @@ namespace turbolang {
                         allocatedValue = allocaInst->getOperand(0);
                     }
 
+                    if (type->isArrayTy()) {
+                        llvm::outs() << "ARRAY TYPE: " << *type << "\n";
+                        if (type->getTypeID() == LLVMManager::llvmBytecodeBuilder->getInt8PtrTy()->getTypeID()) {
+                            llvm::outs() << "YEAH" << "\n";
+                        }
+                    }
+
                     currentFunction->setValue(varName, allocatedValue);
                 }
 
@@ -657,6 +668,7 @@ namespace turbolang {
             DataType resultType = DATA_TYPE_UNKNOWN;
             std::string resultClassName;
             auto argument = arguments[i];
+            llvm::Type *castedType = nullptr;
             if (!llvmFunction->isVarArg() /*&& llvmFunction->arg_size() <= i + 1*/) {
                 auto arg = llvmFunction->getArg(i);
                 auto dataTypeOptional = Type::getType(arg->getType(), true);
@@ -666,10 +678,18 @@ namespace turbolang {
                                       ? arg->getType()->getPointerElementType()->getStructName().str()
                                       : arg->getType()->getStructName().str();
                 }
+                if (arg->getType()->isPointerTy()) {
+                    castedType = arg->getType();
+                }
             }
             //TODO support functions returning custom types
             llvm::Value *llvmFunctionArgument = MathEvaluator::eval(argument, *currentFunction, resultType,
                                                                     resultClassName);
+            if (castedType != nullptr && castedType != llvmFunctionArgument->getType()) {
+                llvm::outs() << "LLVM PREV TYPE: " << *llvmFunctionArgument->getType() << "\n";
+                llvmFunctionArgument = LLVMManager::llvmBytecodeBuilder->CreateBitCast(llvmFunctionArgument, castedType,
+                                                                                       "PtrBitCast");
+            }
             if (llvmFunctionArgument != nullptr) {
                 llvmFunctionArguments.push_back(llvmFunctionArgument);
             }

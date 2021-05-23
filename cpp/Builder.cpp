@@ -21,7 +21,6 @@ namespace turbolang {
         for (const std::string &library : libraries) {
             additionalArguments += "-l" + library + " ";
         }
-        additionalArguments += "dyad.o";
         /**
          * LOCAL BINARY FILE
          */
@@ -39,7 +38,7 @@ namespace turbolang {
          */
 
         //Cross compile for Windows
-        /*
+
         auto windowsPath = basePath + "/executables/windows";
         std::filesystem::current_path(windowsPath);
         //x86 Windows
@@ -68,14 +67,12 @@ namespace turbolang {
             auto x86LinuxPath = linuxPath + "/x86";
             std::string command = "clang++ ../../bytecode/output.ll -o " + x86LinuxPath + "/output_x86 " + additionalArguments;
             std::system(command.c_str());
-            tasksFinished++;
         });
         //x86_64 Linux
         std::thread x64LinuxThread([&linuxPath, &additionalArguments]() {
             auto x64LinuxPath = linuxPath + "/x64";
             std::string command = "clang++ ../../bytecode/output.ll -o " + x64LinuxPath + "/output_x64 " + additionalArguments;
             std::system(command.c_str());
-            tasksFinished++;
         });
 
         //Cross compile for MacOS
@@ -87,31 +84,25 @@ namespace turbolang {
             auto arm64MacosPath = macosPath + "/arm64";
             std::string command = "clang++ ../../bytecode/output.ll -o " + arm64MacosPath + "/output_arm64.app " + additionalArguments;
             std::system(command.c_str());
-            tasksFinished++;
         });
         //arm64e (newer than arm64) MacOS
         std::thread arm64eMacosThread([&macosPath, &additionalArguments]() {
             auto arm64eMacosPath = macosPath + "/arm64e";
             std::string command = "clang++ ../../bytecode/output.ll -o " + arm64eMacosPath + "/output_arm64e.app " + additionalArguments;
             std::system(command.c_str());
-            tasksFinished++;
         });
-    */
-        int totalTasks = 0;//6 threads we just created...
-        while (tasksFinished < totalTasks) { ;
-        }
         /**
-         * Ensure we don't interrupt them. They MUST
+         * Ensure we don't interrupt them. They MUST finish
          */
         //WINDOWS
-        // x86WindowsThread.join();
-        // x64WindowsThread.join();
+         x86WindowsThread.join();
+         x64WindowsThread.join();
         //LINUX
-        // x86LinuxThread.join();
-        // x64LinuxThread.join();
+         x86LinuxThread.join();
+         x64LinuxThread.join();
         //MACOS
-        // arm64MacosThread.join();
-        // arm64eMacosThread.join();
+         arm64MacosThread.join();
+         arm64eMacosThread.join();
         //We can go back to the base path.
         std::filesystem::current_path(basePath);
     }
