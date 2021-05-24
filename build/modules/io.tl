@@ -56,3 +56,7 @@ File createFileThenWriteThenClose(i8* name, i8* content) {
 void println(i8* message) {
     puts(message);
 }
+
+void readLine(i8* destination) {
+    scanf("%[^\n]", destination);
+}

@@ -585,10 +585,10 @@ namespace turbolang {
                         allocatedValue = allocaInst->getOperand(0);
                     }
 
-                    if (type->isArrayTy()) {
-                        llvm::outs() << "ARRAY TYPE: " << *type << "\n";
-                        if (type->getTypeID() == LLVMManager::llvmBytecodeBuilder->getInt8PtrTy()->getTypeID()) {
-                            llvm::outs() << "YEAH" << "\n";
+                    if (type->isPointerTy()) {
+                        if (allocatedValue->getType()->getPointerElementType()->isArrayTy()) {
+                            llvm::outs() << "output: " << *allocatedValue->getType() << "\n";
+                            allocatedValue = LLVMManager::llvmBytecodeBuilder->CreateBitCast(allocatedValue, type, "VariableDeclarationBitCast");
                         }
                     }
 

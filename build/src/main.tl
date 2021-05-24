@@ -1,10 +1,27 @@
 import "io"
 import "string"
+import "time"
 i32 main() {
-    i8[100] text;
-    strcpy(&text, "Test");
-    strcat(&text, " Yeah");
-    println("We got: ");
-    puts(&text);
+    println("Hey, what is your name?");
+    i8[1024] data;
+    readLine(&data);
+    i8* outputData = &data;
+    printf("Welcome to my program, %s.\n", outputData);
+    sleepms(2000);
+    println("How old are you retrooper?");
+    i32 age;
+    scanf("%i", &age);
+    #KINDA BROKEN, WHY IS IT CALLING THE ELSE WHEN THE FIRST IF IS TRUE??
+    if (age < 13) {
+        println("You are so young? Leave LOL\n");
+    }
+    else if (age > 35) {
+        printf("You're a bit old XD. %i already??\n", age);
+    }
+    else {
+        printf("You are %i? Thats fine..\n", age);
+    }
+    sleepms(2000);
+    println("Alright, I've got to go!");
     return 0;
 }
