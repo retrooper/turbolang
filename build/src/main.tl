@@ -11,7 +11,6 @@ i32 main() {
     printf("How old are you %s?", outputData);
     i32 age;
     scanf("%i", &age);
-    #KINDA BROKEN, WHY IS IT CALLING THE ELSE WHEN THE FIRST IF IS TRUE??
     if (age < 13) {
         println("You are so young? Leave LOL\n");
     }
