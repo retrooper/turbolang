@@ -28,6 +28,9 @@ namespace turbolang {
         auto basePath = bytecodePath.string() + "/../";
 
         std::string binaryPath = basePath + "/binary";
+        if (!std::filesystem::exists(binaryPath)) {
+            std::filesystem::create_directory(binaryPath);
+        }
         std::filesystem::current_path(binaryPath);
         std::system((std::string("clang ../bytecode/output.ll -o output.out ") + additionalArguments).c_str());
         std::filesystem::current_path(basePath);
@@ -40,6 +43,9 @@ namespace turbolang {
         //Cross compile for Windows
 
         auto windowsPath = basePath + "/executables/windows";
+        if (!std::filesystem::exists(windowsPath)) {
+            std::filesystem::create_directories(basePath + "/executables/windows");
+        }
         std::filesystem::current_path(windowsPath);
         //x86 Windows
         std::thread x86WindowsThread([&windowsPath, &additionalArguments]() {
