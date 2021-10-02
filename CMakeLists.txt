@@ -6,7 +6,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 include_directories(include)
 
-file(GLOB all_SRCS "${PROJECT_SOURCE_DIR}/cpp/*.cpp")
+file(GLOB all_SRCS "${PROJECT_SOURCE_DIR}/src/*.cpp")
 add_executable(turbolang ${all_SRCS})
 
 find_package(LLVM REQUIRED)

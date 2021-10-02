@@ -218,7 +218,7 @@ namespace turbolang {
         //We only parse new modules. We will not parse the same module twice.
         if (!(std::find(modules.begin(), modules.end(), module) != modules.end())) {
             auto basePath = std::filesystem::current_path();
-            auto modulesPath = basePath.string() + "/build/modules";
+            auto modulesPath = basePath.string() + "/modules";
             std::filesystem::current_path(modulesPath);
             std::string code;
             std::ifstream sourceFile(module);

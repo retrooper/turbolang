@@ -10,9 +10,10 @@
 using namespace turbolang;
 void run() {
     std::string code;
+    //Get out of cmake-build-debug folder
     std::filesystem::current_path("../");
-    std::cout << "cur dir: " << std::filesystem::current_path().c_str() << std::endl;
-    std::ifstream sourceFile("build/src/main.tl");
+
+    std::ifstream sourceFile("samples/main.tl");
     //The filtered source code will be inserted into the variable we passed in as a pointer.
     if (SourceCodeReader::readAndFilterCode(sourceFile, &code) == SOURCE_READER_RESULT_FAILURE) {
         throw std::runtime_error("Failed to read and filter source code!");

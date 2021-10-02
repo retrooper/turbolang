@@ -2,9 +2,14 @@
 
 void turbolang::Compiler::generateBytecode() {
     llvm::raw_fd_ostream *outputStream = &llvm::outs();
-    auto current_path = std::filesystem::current_path().string() + "/build";
-    std::filesystem::current_path(current_path);
-    std::string new_path = current_path + "/bytecode";
+    auto currentPath = std::filesystem::current_path().string() + "/build";
+    //Does build folder exist?
+    if (!std::filesystem::exists(currentPath)) {
+        //Create it if it doesn't exist
+        std::filesystem::create_directories(currentPath);
+    }
+    std::filesystem::current_path(currentPath);
+    std::string new_path = currentPath + "/bytecode";
     if (!std::filesystem::exists(new_path)) {
         std::filesystem::create_directory(new_path);
     }
