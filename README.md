@@ -1,6 +1,6 @@
 # turbolang
 
-TurboLang is a compiler written using C++ 17.
+This is a compiler for the TurboLang programming language. This compiler was written using C++ 17.
 
 ## How to Build The Project
 
