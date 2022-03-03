@@ -2,6 +2,7 @@
 #include "utils/llvm/LLVMIncluder.h"
 #include "function/Function.h"
 #include <string>
+#include <map>
 namespace turbolang {
     struct ClassMemberData {
         llvm::Type* type;
@@ -20,7 +21,7 @@ namespace turbolang {
         void create();
         unsigned int getMemberIndex(const std::string& memberName);
     private:
-        llvm::StructType* structType;
+        llvm::StructType* structType{};
         std::vector<ClassMemberData> clsMemberData;
     };
 }

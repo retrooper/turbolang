@@ -77,7 +77,8 @@ namespace turbolang {
                 llvm::Value *indices[2] = {
                         llvm::ConstantInt::get(LLVMManager::llvmBytecodeBuilder->getInt32Ty(), llvm::APInt(32, 0)),
                         llvmIndex};
-                llvm::Value *ptr = LLVMManager::llvmBytecodeBuilder->CreateInBoundsGEP(arrayAllocaInst,
+                llvm::Value *ptr = LLVMManager::llvmBytecodeBuilder->CreateInBoundsGEP(arrayAllocaInst->getAllocatedType(),
+                                                                                       arrayAllocaInst,
                                                                                        llvm::ArrayRef<llvm::Value *>(
                                                                                                indices, 2),
                                                                                        "GetArrayElementByIndex");
@@ -97,11 +98,12 @@ namespace turbolang {
             llvm::Value *indices[2] = {
                     llvm::ConstantInt::get(LLVMManager::llvmBytecodeBuilder->getInt32Ty(), llvm::APInt(32, 0)),
                     llvmIndex};
-            llvm::Value *ptr = LLVMManager::llvmBytecodeBuilder->CreateInBoundsGEP(arrayAllocaInst,
+            llvm::Value *ptr = LLVMManager::llvmBytecodeBuilder->CreateInBoundsGEP(arrayAllocaInst->getAllocatedType(),
+                                                                                   arrayAllocaInst,
                                                                                    llvm::ArrayRef<llvm::Value *>(
                                                                                            indices, 2),
                                                                                    "GetArrayElementByIndex");
-            return LLVMManager::llvmBytecodeBuilder->CreateLoad(ptr, "LoadArrayPtr");
+            return LLVMManager::llvmBytecodeBuilder->CreateLoad(ptr->getType(), ptr, "LoadArrayPtr");
         }
         Token firstParenthesis;
         firstParenthesis.text = "(";

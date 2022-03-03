@@ -12,15 +12,12 @@ namespace turbolang {
     }
 
     void Function::create() {
-        struct timespec ts{};
-        clock_gettime(CLOCK_REALTIME, &ts);
-        long currentNS = ts.tv_nsec;
         llvm::FunctionType *llvmFunctionType;
         if (arguments.empty()) {
             llvmFunctionType = llvm::FunctionType::get(Type::getLLVMType(type, extraData), false);
         } else {
             std::vector<llvm::Type *> params;
-            for (const FunctionArgument &argument : arguments) {
+            for (const FunctionArgument &argument: arguments) {
                 llvm::Type *argType = Type::getLLVMType(argument.type, argument.typeInfo);
                 if (argument.isPtr) {
                     argType = argType->getPointerTo();
@@ -60,8 +57,10 @@ namespace turbolang {
             auto *structType = (llvm::StructType *) allocaInst->getAllocatedType();
             Class clazz = Class::classMap[structType->getName().str()];
             unsigned int memberIndex = clazz.getMemberIndex(tokens[1]);
-            return (llvm::AllocaInst *) LLVMManager::llvmBytecodeBuilder->CreateStructGEP(allocaInst, memberIndex,
-                                                                                          llvm::Twine(tokens[1]));
+            return (llvm::AllocaInst *)
+                    LLVMManager::llvmBytecodeBuilder->CreateStructGEP(structType,
+                                                                      allocaInst, memberIndex,
+                                                                      llvm::Twine(tokens[1]));
         }
     }
 
@@ -83,7 +82,9 @@ namespace turbolang {
             if (allocaInst == nullptr) {
                 return nullptr;
             }
-            return LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst, name.substr(1));
+            return
+                    LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst->getAllocatedType(),
+                                                                 allocaInst, name.substr(1));
         }
     }
 
@@ -91,19 +92,23 @@ namespace turbolang {
         std::vector<std::string> tokens = split(name, ".");
         if (tokens.size() == 1) {
             llvm::Value *allocaInst = getValue(name);
-            return LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst);
+            return LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst->getType(),
+                                                                allocaInst, name.substr(1));
         } else {
             //Struct type alloca
             llvm::AllocaInst *allocaInst = allocaMap[tokens[0]];
-            llvm::Value *instance = LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst);
+            llvm::Value *instance = LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst->getAllocatedType(),
+                                                                                 allocaInst);
             auto *structType = (llvm::StructType *) allocaInst->getAllocatedType();
             Class clazz = Class::classMap[structType->getName().str()];
             unsigned int memberIndex = clazz.getMemberIndex(tokens[1]);
-            llvm::AllocaInst *ptr = (llvm::AllocaInst *) LLVMManager::llvmBytecodeBuilder->CreateStructGEP(instance,
-                                                                                                           memberIndex,
-                                                                                                           llvm::Twine(
-                                                                                                                   tokens[1]));
-            return LLVMManager::llvmBytecodeBuilder->CreateLoad(ptr);
+            llvm::AllocaInst *ptr = (llvm::AllocaInst *) LLVMManager::llvmBytecodeBuilder->CreateStructGEP(
+                    instance->getType(),
+                    instance,
+                    memberIndex,
+                    llvm::Twine(
+                            tokens[1]));
+            return LLVMManager::llvmBytecodeBuilder->CreateLoad(ptr->getAllocatedType(), ptr);
         }
     }
 
@@ -163,7 +168,7 @@ namespace turbolang {
 
     std::vector<Function *> Function::getFunctions(const std::string &functionName) {
         std::vector<Function *> validFunctions;
-        for (auto &i : functions) {
+        for (auto &i: functions) {
             Function *function = &i;
             if (function->name == functionName) {
                 validFunctions.push_back(function);
