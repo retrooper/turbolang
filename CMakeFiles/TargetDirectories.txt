@@ -1,0 +1,6 @@
+/workspace/turbolang/CMakeFiles/turbolang.dir
+/workspace/turbolang/CMakeFiles/intrinsics_gen.dir
+/workspace/turbolang/CMakeFiles/omp_gen.dir
+/workspace/turbolang/CMakeFiles/acc_gen.dir
+/workspace/turbolang/CMakeFiles/edit_cache.dir
+/workspace/turbolang/CMakeFiles/rebuild_cache.dir

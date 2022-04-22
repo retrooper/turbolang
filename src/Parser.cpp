@@ -572,6 +572,9 @@ namespace turbolang {
                 currentFunction->setAllocaInst(
                         varName, allocaInst);
 
+                        std::cout << "pre check equals, var name: " << varName << std::endl;
+                        llvm::outs() << ", alloca: " << *allocaInst->getType() << "\n";
+
 
                 auto equalsOperator = expectTokenType(TOKEN_TYPE_OPERATOR, "=");
                 //bool signedType = typeToken.text.find('u') != 0;
@@ -592,6 +595,13 @@ namespace turbolang {
                         }
                     }
 
+                    currentFunction->setValue(varName, allocatedValue);
+                }
+                else {
+                    //TODO We were here!
+                    allocatedValue = llvm::ConstantPointerNull::get(llvm::PointerType::get(
+                                Type::getLLVMType(DATA_TYPE_CLASS,
+                                                  "File"), 0));
                     currentFunction->setValue(varName, allocatedValue);
                 }
 

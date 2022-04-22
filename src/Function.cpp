@@ -56,11 +56,15 @@ namespace turbolang {
             llvm::AllocaInst *allocaInst = allocaMap[tokens[0]];
             auto *structType = (llvm::StructType *) allocaInst->getAllocatedType();
             Class clazz = Class::classMap[structType->getName().str()];
+            std::cout << "name: " << name << std::endl;
+            std::cout << "clazz: " << clazz.name << std::endl;
             unsigned int memberIndex = clazz.getMemberIndex(tokens[1]);
-            return (llvm::AllocaInst *)
+            llvm::AllocaInst * inst = (llvm::AllocaInst *)((llvm::AllocaInst *)
                     LLVMManager::llvmBytecodeBuilder->CreateStructGEP(structType,
                                                                       allocaInst, memberIndex,
-                                                                      llvm::Twine(tokens[1]));
+                                                                      llvm::Twine(tokens[1])));
+            llvm::outs() << "Inst: " << *inst->getType() << "\n";
+            return inst;
         }
     }
 
@@ -75,6 +79,7 @@ namespace turbolang {
     //Get variable value
     llvm::Value *Function::getValue(std::string name) {
         bool pointerValue = name.find('&') == 0;
+
         llvm::AllocaInst *allocaInst = getAllocaInst(pointerValue ? name.substr(1) : name);
         if (pointerValue) {
             return allocaInst;
@@ -82,6 +87,7 @@ namespace turbolang {
             if (allocaInst == nullptr) {
                 return nullptr;
             }
+            llvm::outs() << "value of type: " << *allocaInst->getAllocatedType() << ", vs alloca type: " << *allocaInst->getType() << "\n";
             return
                     LLVMManager::llvmBytecodeBuilder->CreateLoad(allocaInst->getAllocatedType(),
                                                                  allocaInst, name.substr(1));

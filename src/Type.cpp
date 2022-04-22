@@ -73,9 +73,11 @@ namespace turbolang {
         if (type == nullptr) {
             return std::nullopt;
         }
+        
         if (type->isPointerTy() ? llvm::isa<llvm::StructType>(type->getPointerElementType()) : llvm::isa<llvm::StructType>(type)) {
             return DATA_TYPE_CLASS;
         }
+
         if (typeMap.empty()) {
             initMap();
         }

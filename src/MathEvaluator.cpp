@@ -155,7 +155,9 @@ namespace turbolang {
                                 Type::getLLVMType(resultType == DATA_TYPE_UNKNOWN ? DATA_TYPE_BYTE : resultType,
                                                   className), 0));
                     } else {
+                        std::cout << "pre pre" << std::endl;
                         variableValue = currentFunction.getValue(token.text);
+                        std::cout << "post post" << std::endl;
                         if (variableValue == nullptr) {
                             //Check for function
                             llvm::Function *func = LLVMManager::llvmModule->getFunction(token.text);

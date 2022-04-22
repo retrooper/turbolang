@@ -18,6 +18,7 @@ void run() {
     if (SourceCodeReader::readAndFilterCode(sourceFile, &code) == SOURCE_READER_RESULT_FAILURE) {
         throw std::runtime_error("Failed to read and filter source code!");
     }
+    std::cout << "code: \n" << code << std::endl;
     Logger::mode = LOG_MODE_WARNING;
     LLVMManager::init();
     long start = turbolang::getCurrentMicroTime();
